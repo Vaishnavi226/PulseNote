@@ -1,0 +1,321 @@
+// PulseNote — Prisma Schema Specification
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  AUTHOR
+  MODERATOR
+  ADMIN
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ChallengeType {
+  AGREE
+  DISAGREE
+  ADD_CONTEXT
+  FACT_CHECK
+  PERSONAL_EXPERIENCE
+}
+
+enum VoteType {
+  AGREE
+  DISAGREE
+}
+
+enum ModerationStatus {
+  VISIBLE
+  REPORTED
+  UNDER_REVIEW
+  HIDDEN
+  DELETED
+}
+
+model User {
+  id           String    @id @default(uuid())
+  name         String
+  username     String    @unique
+  email        String    @unique
+  passwordHash String
+  avatarUrl    String?
+  bio          String?
+  title        String?
+  role         Role      @default(USER)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  articles         Article[]
+  challenges       Challenge[]
+  challengeReplies ChallengeReply[]
+  challengeVotes   ChallengeVote[]
+  comments         Comment[]
+  articleLikes     ArticleLike[]
+  articleBookmarks ArticleBookmark[]
+  notifications    Notification[]   @relation("UserNotifications")
+  readingHistory   ReadingHistory[]
+  reportsSubmitted Report[]         @relation("ReporterRelation")
+  moderationLogs   AuditLog[]
+
+  @@map("users")
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  articles Article[]
+
+  @@map("categories")
+}
+
+model Tag {
+  id        String       @id @default(uuid())
+  name      String       @unique
+  slug      String       @unique
+  createdAt DateTime     @default(now())
+
+  articleTags ArticleTag[]
+
+  @@map("tags")
+}
+
+model ArticleTag {
+  articleId String
+  tagId     String
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, tagId])
+  @@unique([articleId, tagId])
+  @@map("article_tags")
+}
+
+model Article {
+  id             String        @id @default(uuid())
+  authorId       String
+  categoryId     String
+  title          String
+  slug           String        @unique
+  excerpt        String?
+  content        String
+  quickTake      String?
+  coverImageUrl  String?
+  status         ArticleStatus @default(DRAFT)
+  pulseScore     Int           @default(0)
+  views          Int           @default(0)
+  readingTimeMin Int           @default(5)
+  seoTitle       String?
+  seoDescription String?
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  articleTags    ArticleTag[]
+  challenges     Challenge[]
+  comments       Comment[]
+  articleLikes   ArticleLike[]
+  bookmarks      ArticleBookmark[]
+  readingHistory ReadingHistory[]
+  analytics      ArticleAnalyticsDaily[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([pulseScore])
+  @@map("articles")
+}
+
+model Challenge {
+  id            String           @id @default(uuid())
+  articleId     String
+  authorId      String
+  type          ChallengeType
+  body          String
+  quotedText    String?
+  sourceUrl     String?
+  agreeCount    Int              @default(0)
+  disagreeCount Int              @default(0)
+  replyCount    Int              @default(0)
+  status        ModerationStatus @default(VISIBLE)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  replies ChallengeReply[]
+  votes   ChallengeVote[]
+  reports Report[]         @relation("ChallengeReports")
+
+  @@index([articleId])
+  @@map("challenges")
+}
+
+model ChallengeReply {
+  id            String           @id @default(uuid())
+  challengeId   String
+  authorId      String
+  parentReplyId String?
+  body          String
+  status        ModerationStatus @default(VISIBLE)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  challenge   Challenge        @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  author      User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parentReply ChallengeReply?  @relation("ReplyHierarchy", fields: [parentReplyId], references: [id], onDelete: Cascade)
+  childReplies ChallengeReply[] @relation("ReplyHierarchy")
+
+  @@index([challengeId])
+  @@map("challenge_replies")
+}
+
+model ChallengeVote {
+  id          String   @id @default(uuid())
+  challengeId String
+  userId      String
+  voteType    VoteType
+  createdAt   DateTime @default(now())
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId])
+  @@map("challenge_votes")
+}
+
+model Comment {
+  id              String           @id @default(uuid())
+  articleId       String
+  authorId        String
+  parentCommentId String?
+  body            String
+  status          ModerationStatus @default(VISIBLE)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  article       Article   @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  author        User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parentComment Comment?  @relation("CommentHierarchy", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  childComments Comment[] @relation("CommentHierarchy")
+
+  @@index([articleId])
+  @@map("comments")
+}
+
+model ArticleLike {
+  id        String   @id @default(uuid())
+  articleId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, userId])
+  @@map("article_likes")
+}
+
+model ArticleBookmark {
+  id        String   @id @default(uuid())
+  articleId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, userId])
+  @@map("article_bookmarks")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  targetUrl String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notifications")
+}
+
+model ReadingHistory {
+  id              String   @id @default(uuid())
+  userId          String
+  articleId       String
+  progressPercent Int      @default(0)
+  lastReadAt      DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+  @@map("reading_history")
+}
+
+model ArticleAnalyticsDaily {
+  id         String   @id @default(uuid())
+  articleId  String
+  date       DateTime
+  viewsCount Int      @default(0)
+  likesCount Int      @default(0)
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, date])
+  @@map("article_analytics_daily")
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  reporterId  String
+  challengeId String?
+  commentId   String?
+  reason      String
+  details     String?
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+
+  reporter  User       @relation("ReporterRelation", fields: [reporterId], references: [id], onDelete: Cascade)
+  challenge Challenge? @relation("ChallengeReports", fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@map("reports")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String
+  action    String
+  target    String
+  details   String?
+  createdAt DateTime @default(now())
+
+  actor User @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@map("audit_logs")
+}
