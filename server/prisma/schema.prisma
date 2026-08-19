@@ -1,4 +1,5 @@
 // PulseNote — Prisma Schema Specification
+// Phase 2C — Database Schema Implementation
 
 generator client {
   provider = "prisma-client-js"
@@ -9,11 +10,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Enums ───────────────────────────────────────────────
+
 enum Role {
   USER
   AUTHOR
   MODERATOR
   ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
 }
 
 enum ArticleStatus {
@@ -43,18 +52,38 @@ enum ModerationStatus {
   DELETED
 }
 
+enum NotificationType {
+  LIKE
+  CHALLENGE
+  CHALLENGE_VOTE
+  REPLY
+  MENTION
+  MODERATION
+  FEATURED
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+// ─── Models ──────────────────────────────────────────────
+
 model User {
-  id           String    @id @default(uuid())
+  id           String     @id @default(uuid())
   name         String
-  username     String    @unique
-  email        String    @unique
+  username     String     @unique
+  email        String     @unique
   passwordHash String
   avatarUrl    String?
   bio          String?
   title        String?
-  role         Role      @default(USER)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  role         Role       @default(USER)
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   articles         Article[]
   challenges       Challenge[]
@@ -63,21 +92,21 @@ model User {
   comments         Comment[]
   articleLikes     ArticleLike[]
   articleBookmarks ArticleBookmark[]
-  notifications    Notification[]   @relation("UserNotifications")
+  notifications    Notification[]    @relation("UserNotifications")
   readingHistory   ReadingHistory[]
-  reportsSubmitted Report[]         @relation("ReporterRelation")
+  reportsSubmitted Report[]          @relation("ReporterRelation")
   moderationLogs   AuditLog[]
 
   @@map("users")
 }
 
 model Category {
-  id          String    @id @default(uuid())
-  name        String    @unique
-  slug        String    @unique
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
   description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   articles Article[]
 
@@ -85,10 +114,10 @@ model Category {
 }
 
 model Tag {
-  id        String       @id @default(uuid())
-  name      String       @unique
-  slug      String       @unique
-  createdAt DateTime     @default(now())
+  id        String   @id @default(uuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
 
   articleTags ArticleTag[]
 
@@ -103,7 +132,6 @@ model ArticleTag {
   tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([articleId, tagId])
-  @@unique([articleId, tagId])
   @@map("article_tags")
 }
 
@@ -127,8 +155,8 @@ model Article {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  category   Category @relation(fields: [categoryId], references: [id])
+  author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   articleTags    ArticleTag[]
   challenges     Challenge[]
@@ -141,6 +169,9 @@ model Article {
   @@index([slug])
   @@index([status])
   @@index([pulseScore])
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([publishedAt])
   @@map("articles")
 }
 
@@ -167,6 +198,8 @@ model Challenge {
   reports Report[]         @relation("ChallengeReports")
 
   @@index([articleId])
+  @@index([authorId])
+  @@index([status])
   @@map("challenges")
 }
 
@@ -180,12 +213,13 @@ model ChallengeReply {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
-  challenge   Challenge        @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  author      User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  parentReply ChallengeReply?  @relation("ReplyHierarchy", fields: [parentReplyId], references: [id], onDelete: Cascade)
+  challenge    Challenge        @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  author       User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parentReply  ChallengeReply?  @relation("ReplyHierarchy", fields: [parentReplyId], references: [id], onDelete: Cascade)
   childReplies ChallengeReply[] @relation("ReplyHierarchy")
 
   @@index([challengeId])
+  @@index([authorId])
   @@map("challenge_replies")
 }
 
@@ -217,8 +251,10 @@ model Comment {
   author        User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   parentComment Comment?  @relation("CommentHierarchy", fields: [parentCommentId], references: [id], onDelete: Cascade)
   childComments Comment[] @relation("CommentHierarchy")
+  reports       Report[]  @relation("CommentReports")
 
   @@index([articleId])
+  @@index([authorId])
   @@map("comments")
 }
 
@@ -249,18 +285,19 @@ model ArticleBookmark {
 }
 
 model Notification {
-  id        String   @id @default(uuid())
+  id        String           @id @default(uuid())
   userId    String
   title     String
   message   String
-  type      String
+  type      NotificationType
   targetUrl String?
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
 
   user User @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([userId, isRead])
   @@map("notifications")
 }
 
@@ -292,18 +329,21 @@ model ArticleAnalyticsDaily {
 }
 
 model Report {
-  id          String   @id @default(uuid())
+  id          String       @id @default(uuid())
   reporterId  String
   challengeId String?
   commentId   String?
   reason      String
   details     String?
-  status      String   @default("PENDING")
-  createdAt   DateTime @default(now())
+  status      ReportStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
 
   reporter  User       @relation("ReporterRelation", fields: [reporterId], references: [id], onDelete: Cascade)
   challenge Challenge? @relation("ChallengeReports", fields: [challengeId], references: [id], onDelete: Cascade)
+  comment   Comment?   @relation("CommentReports", fields: [commentId], references: [id], onDelete: Cascade)
 
+  @@index([status])
+  @@index([reporterId])
   @@map("reports")
 }
 
@@ -317,5 +357,7 @@ model AuditLog {
 
   actor User @relation(fields: [actorId], references: [id], onDelete: Cascade)
 
+  @@index([actorId])
+  @@index([createdAt])
   @@map("audit_logs")
 }

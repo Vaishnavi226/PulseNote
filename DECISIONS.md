@@ -351,3 +351,305 @@ All AI interactions route through backend Express endpoint (`POST /api/ai/genera
 
 ### Reversal difficulty
 Low
+
+---
+
+## DECISION-009 — Phase 2 Relational Database Schema & Prisma Model Naming Standards
+
+Date: 2026-08-19  
+Phase: Phase 2 — Database + Prisma  
+Status: Accepted  
+
+### Context
+PulseNote requires an explicit, type-safe relational schema linking Users, Articles, Categories, Tags, Challenges, Challenge Replies, Challenge Votes, Comments, Article Likes, Bookmarks, Notifications, Reading History, and Daily Analytics. Model names must avoid ambiguity with JavaScript reserved words.
+
+### Decision
+Define explicit Prisma models with UUID surrogate primary keys (`@id @default(uuid())`) and explicit table name mapping (`@@map("table_name")`). Standardize entity names as `ArticleBookmark` (instead of bare `Bookmark`) and `ArticleAnalyticsDaily` (instead of ambiguous `ArticleAnalytics`).
+
+### Alternatives considered
+- **Option A:** Auto-incrementing integer primary keys.
+- **Option B:** Implicit table naming without `@@map`.
+- **Option C:** Standardized UUID keys + explicit `@@map("table_name")` naming.
+
+### Why this approach
+- UUIDs prevent key enumeration vulnerabilities across public API routes.
+- `@@map` aligns database table names with standard lower_snake_case conventions (`users`, `articles`, `challenge_votes`).
+- `ArticleBookmark` clearly disambiguates article bookmarks from future user-saved items.
+
+### Why not the alternatives
+- Integer primary keys expose database sequence numbers in client URLs (`/articles/42`).
+- Un-mapped table names default to PascalCase in PostgreSQL requiring double-quoted queries.
+
+### Libraries/dependencies affected
+- `@prisma/client`
+- `prisma`
+
+### Files/modules affected
+- `server/prisma/schema.prisma`
+- `server/src/config/prisma.ts`
+
+### Consequences
+- Typed queries generated automatically by Prisma CLI.
+- Database tables map cleanly to lower_snake_case.
+
+### Reversal difficulty
+Medium
+
+---
+
+## DECISION-010 — Omission of Premature Entities (Polls, CommentVotes, Raw Pageviews)
+
+Date: 2026-08-19  
+Phase: Phase 2 — Database + Prisma  
+Status: Accepted  
+
+### Context
+Including unneeded or post-V1 features (Polls, voting on general comments, raw click-stream logs) early in database development bloats the schema and complicates migrations.
+
+### Decision
+Omit `Poll`, `PollOption`, `PollVote`, `CommentVote`, and raw `ArticleView` click-stream tables from the Phase 2 database schema. Limit voting strictly to the **Challenge** system (`AGREE` / `DISAGREE`) and track page views via the `Article.views` counter and `ArticleAnalyticsDaily` summaries.
+
+### Alternatives considered
+- **Option A:** Include all candidate entities (Polls, CommentVotes, raw click-stream logs) in initial V1 schema.
+- **Option B:** Lean core relational schema focusing strictly on Articles, Challenges, Comments, Likes, and Bookmarks.
+
+### Why this approach
+- Preserves the product focus on structured **Challenges** as the primary discussion engine.
+- Prevents database storage bloat caused by logging raw row entries for every page hit.
+- Keeps migration cycles clean and maintainable.
+
+### Why not the alternatives
+- General comment voting dilutes the signature differentiator of Challenge voting.
+- Raw page view tables create high write contention under traffic surges without offering immediate V1 value.
+
+### Libraries/dependencies affected
+- `@prisma/client`
+
+### Files/modules affected
+- `server/prisma/schema.prisma`
+
+### Consequences
+- Database schema remains lightweight and maintainable.
+
+### Reversal difficulty
+Low
+
+---
+
+## DECISION-011 — Self-Referential Tree Hierarchy for Challenge Replies and Comments
+
+Date: 2026-08-19  
+Phase: Phase 2 — Database + Prisma  
+Status: Accepted  
+
+### Context
+Both Challenge Replies and general Comments require threaded responses. Creating separate `ChallengeReply` vs `ChallengeReplyChild` tables creates redundant schemas.
+
+### Decision
+Use a self-referential parent key (`parentReplyId` on `ChallengeReply` and `parentCommentId` on `Comment`) with `onDelete: Cascade` to model nested discussion trees within a single table per domain.
+
+### Alternatives considered
+- **Option A:** Separate child tables for nested reply levels.
+- **Option B:** Self-referential nullable parent foreign key (`parentReplyId`).
+
+### Why this approach
+- Allows flexible multi-level thread representation in a single table.
+- Simplifies Prisma relations (`parentReply` / `childReplies`, `parentComment` / `childComments`).
+- Ensures deleting a parent post cleanly cascade-deletes its nested thread.
+
+### Why not the alternatives
+- Separate child tables limit nesting depth arbitrarily and require duplicate CRUD services.
+
+### Libraries/dependencies affected
+- `@prisma/client`
+
+### Files/modules affected
+- `server/prisma/schema.prisma`
+
+### Consequences
+- Nested replies queried efficiently using single-table queries and relation includes.
+
+### Reversal difficulty
+Low
+
+---
+
+## DECISION-012 — Foreign Key Cascade & Protective Category Constraints
+
+Date: 2026-08-19  
+Phase: Phase 2 — Database + Prisma  
+Status: Accepted  
+
+### Context
+Cascade deletion rules must automatically clean up user-generated content (likes, bookmarks, challenges, replies) when a parent entity is deleted, while safeguarding critical taxonomy (Categories).
+
+### Decision
+Apply `onDelete: Cascade` on all dependent user/article relationships (`ArticleTag`, `Challenge`, `Comment`, `ArticleLike`, `ArticleBookmark`, `Notification`, `ReadingHistory`). Restrict deletion on `Category` so an admin cannot accidentally delete active articles.
+
+### Alternatives considered
+- **Option A:** Soft-deletes across all entities with `deletedAt` timestamps.
+- **Option B:** Hard delete with selective `onDelete: Cascade` for child interactions and `Restrict` for categories.
+
+### Why this approach
+- Guarantees database referential integrity without leaving orphaned vote/like rows.
+- Protects core content when categories are managed.
+- Simplifies initial V1 query logic.
+
+### Why not the alternatives
+- Blanket soft-deletes add query overhead (`WHERE deletedAt IS NULL`) to every single fetch query in the application.
+
+### Libraries/dependencies affected
+- `@prisma/client`
+
+### Files/modules affected
+- `server/prisma/schema.prisma`
+
+### Consequences
+- User/article deletion cleanly sweeps related interaction data.
+- Category deletion requires explicit article re-assignment.
+
+### Reversal difficulty
+Medium
+
+---
+
+## DECISION-013 — Phase 2C Schema Finalization: New Enums and User Moderation Status
+
+Date: 2026-08-19  
+Phase: Phase 2C — Schema Implementation  
+Status: Accepted  
+
+### Context
+The initial Phase 2 schema used bare `String` fields for `Notification.type` and `Report.status`, and had no mechanism for user-level moderation (ban/suspend). The Pre-Schema Audit identified these as type-safety gaps.
+
+### Decision
+Add three new Prisma enums and one new User field:
+- `UserStatus` enum (`ACTIVE, SUSPENDED, BANNED`) on `User.status` field
+- `NotificationType` enum (`LIKE, CHALLENGE, CHALLENGE_VOTE, REPLY, MENTION, MODERATION, FEATURED`) replacing `Notification.type` String
+- `ReportStatus` enum (`PENDING, UNDER_REVIEW, RESOLVED, DISMISSED`) replacing `Report.status` String
+
+### Alternatives considered
+- **Option A:** Keep bare String fields and validate only in application/service layer.
+- **Option B:** Use PostgreSQL CHECK constraints instead of Prisma enums.
+- **Option C:** Use Prisma-native enums enforcing valid values at both database and ORM level.
+
+### Why this approach
+- Prisma enums enforce valid values at the database level — even raw SQL connections cannot insert invalid values.
+- TypeScript types are auto-generated from enums, eliminating string typos in service code.
+- `User.status` enables future moderation without a schema migration.
+
+### Why not the alternatives
+- Application-layer validation can be bypassed by direct database connections or future admin tools.
+- CHECK constraints are not natively represented in Prisma's type system.
+
+### Consequences
+- Initial migration creates all 8 enums alongside 16 tables.
+- Seed script does not need modification (seeds do not use the new enums).
+
+### Reversal difficulty
+Low (initial migration, no data to lose)
+
+---
+
+## DECISION-014 — Explicit onDelete: Restrict on Category Protection
+
+Date: 2026-08-19  
+Phase: Phase 2C — Schema Implementation  
+Status: Accepted  
+
+### Context
+DECISION-012 established that Category deletion should be protected so admins cannot accidentally delete active articles. The Phase 1 schema had no explicit `onDelete` on the Article→Category relation, relying on PostgreSQL's default behavior for non-nullable foreign keys.
+
+### Decision
+Add explicit `onDelete: Restrict` to the Article→Category Prisma relation. This generates `ON DELETE RESTRICT` in PostgreSQL, which blocks any attempt to delete a category that still has articles referencing it.
+
+### Why this approach
+- Makes the protection intent explicit in the schema rather than relying on implicit ORM defaults.
+- Documents the business rule (admin must reassign articles before deleting a category) directly in the data model.
+
+### Reversal difficulty
+Low
+
+---
+
+## DECISION-015 — Report→Comment Relation and CommentReports Back-Relation
+
+Date: 2026-08-19  
+Phase: Phase 2C — Schema Implementation  
+Status: Accepted  
+
+### Context
+The Phase 1 schema had a `commentId` field on the Report model but no Prisma `@relation` connecting it to the Comment model. This meant:
+- No referential integrity enforcement at the database level for comment-targeted reports.
+- No Prisma-generated type safety for querying reports that target comments.
+- Deleting a comment could leave dangling `commentId` values in reports.
+
+### Decision
+Add a `Comment? @relation("CommentReports")` on the Report model and a `reports Report[] @relation("CommentReports")` back-relation on the Comment model. This creates a proper foreign key with `onDelete: Cascade`.
+
+### Why this approach
+- Enables reports to target both Challenges and Comments with full referential integrity.
+- When a comment is deleted, all reports targeting it are cascade-deleted (consistent with other moderation data cleanup).
+
+### Reversal difficulty
+Low (initial migration, no data)
+
+---
+
+## DECISION-016 — Composite and Strategic Indexing for Query Performance
+
+Date: 2026-08-19  
+Phase: Phase 2C — Schema Implementation  
+Status: Accepted  
+
+### Context
+The Phase 1 schema had minimal indexing — only 5 non-unique indexes. The Pre-Schema Audit identified 13 missing indexes that would cause full table scans on common query patterns: author profile listings, category filtering, date sorting, moderation queues, and unread notification counts.
+
+### Decision
+Add 13 new indexes across 7 models:
+
+| Model | New Indexes |
+|---|---|
+| Article | `authorId`, `categoryId`, `publishedAt` |
+| Challenge | `authorId`, `status` |
+| ChallengeReply | `authorId` |
+| Comment | `authorId` |
+| Notification | `[userId, isRead]` (composite) |
+| Report | `status`, `reporterId` |
+| AuditLog | `actorId`, `createdAt` |
+
+### Why this approach
+- Author profile pages query articles/challenges/comments by `authorId` — without an index, every profile view triggers a sequential scan.
+- Category filtering on Explore page queries `Article.categoryId` — the most common filter operation.
+- Date sorting (`ORDER BY publishedAt`) requires an index for efficient range scans.
+- The composite `[userId, isRead]` index on Notification optimizes the unread count query (`WHERE userId = ? AND isRead = false`) by narrowing both conditions simultaneously.
+- Moderation queue queries filter by `Report.status` — an admin-only but performance-critical query.
+
+### Why not the alternatives
+- Relying on foreign key alone (no explicit index) — PostgreSQL does not automatically index foreign keys.
+- Deferring indexes to later — early indexing prevents slow queries from becoming habits.
+
+### Reversal difficulty
+Low (indexes can be dropped without data loss)
+
+---
+
+## DECISION-017 — Removal of Redundant @@unique on ArticleTag
+
+Date: 2026-08-19  
+Phase: Phase 2C — Schema Implementation  
+Status: Accepted  
+
+### Context
+The ArticleTag model had both `@@id([articleId, tagId])` and `@@unique([articleId, tagId])`. The `@@id` composite primary key already enforces uniqueness on the combination, making the `@@unique` constraint a redundant duplicate.
+
+### Decision
+Remove `@@unique([articleId, tagId])` from ArticleTag. The `@@id([articleId, tagId])` composite primary key provides identical uniqueness enforcement.
+
+### Why this approach
+- Eliminates a redundant database index that would consume storage and slow writes without providing additional constraint value.
+- Cleaner schema definition.
+
+### Reversal difficulty
+Low
+
