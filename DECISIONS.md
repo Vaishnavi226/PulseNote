@@ -653,3 +653,160 @@ Remove `@@unique([articleId, tagId])` from ArticleTag. The `@@id([articleId, tag
 ### Reversal difficulty
 Low
 
+---
+
+## DECISION-018 — Generic Zod Validation Middleware for Express Request Validation
+
+Date: 2026-08-20
+Phase: Phase 3B — Backend Authentication
+Status: Accepted
+
+### Context
+Phase 3 introduces registration and login endpoints requiring strict input validation (email format, password length, username format). DECISION-003 established Zod as the validation layer in the `Route → Validator → Controller → Service` pipeline, but no Zod validation middleware existed yet.
+
+### Decision
+Create a generic `validate` middleware factory (`server/src/middleware/validate.ts`) that accepts a Zod schema and validates `req.body`, `req.query`, or `req.params` against it. Validation errors are returned using the existing `AppError` class with a `VALIDATION_ERROR` code.
+
+### Alternatives considered
+- **Option A:** Validate inside each controller method (inline validation).
+- **Option B:** Create per-route validation functions without Zod.
+- **Option C:** Generic Zod validation middleware factory.
+
+### Why this approach
+- Reusable across all future endpoints (auth, articles, challenges, comments).
+- Zod schemas are self-documenting and co-located with validators in `server/src/validators/`.
+- Follows DECISION-003 pipeline without modifying the existing error handler.
+
+### Why not the alternatives
+- Inline controller validation violates the thin-controller principle.
+- Custom validation functions duplicate what Zod already provides.
+
+### Libraries/dependencies affected
+- `zod` (already installed)
+
+### Files/modules affected
+- `server/src/middleware/validate.ts` (new)
+- `server/src/validators/authValidators.ts` (new)
+
+### Consequences
+- All future endpoints use `validate(schema)` in the route definition before the controller.
+- Validation errors are consistent with the PRD error response format.
+
+### Reversal difficulty
+Low
+
+---
+
+## DECISION-019 — JWT Bearer Token Authentication Middleware Architecture
+
+Date: 2026-08-20
+Phase: Phase 3B — Backend Authentication
+Status: Accepted
+
+### Context
+Protected endpoints (GET /auth/me, and all future article/challenge/comment mutations) require server-side JWT verification. DECISION-005 established JWT + bcryptjs with Bearer token via Authorization header.
+
+### Decision
+Create two separate middleware functions:
+1. `authenticateToken` — extracts Bearer token from Authorization header, verifies JWT signature and expiration, fetches user from DB, attaches `{ id, username, email, role, status }` to `req.user`.
+2. `requireRole(...roles: Role[])` — checks `req.user.role` against an allowed roles list. Returns 403 if insufficient.
+
+These are composed per-route: `router.get('/me', authenticateToken, controller.getMe)`.
+
+### Alternatives considered
+- **Option A:** Single combined middleware (authenticate + authorize in one function).
+- **Option B:** Separate middleware composed per-route.
+- **Option C:** Global middleware that authenticates every request.
+
+### Why this approach
+- Single-responsibility: authentication and authorization are distinct concerns.
+- `authenticateToken` is reusable on all protected routes.
+- `requireRole` is optional and composable only where needed.
+- Avoids global authentication that would break public endpoints.
+
+### Why not the alternatives
+- Combined middleware cannot be selectively applied to some routes but not others.
+- Global authentication adds unnecessary overhead to public endpoints and complicates error handling.
+
+### Files/modules affected
+- `server/src/middleware/authenticateToken.ts` (new)
+- `server/src/middleware/requireRole.ts` (new)
+
+### Consequences
+- Every protected route explicitly includes `authenticateToken`.
+- Admin/moderator routes additionally include `requireRole('ADMIN')` or `requireRole('MODERATOR', 'ADMIN')`.
+
+### Reversal difficulty
+Low
+
+---
+
+## DECISION-020 — Auth Service: Separate Business Logic Layer for Authentication
+
+Date: 2026-08-20
+Phase: Phase 3B — Backend Authentication
+Status: Accepted
+
+### Context
+Registration, login, and user retrieval involve password hashing, JWT generation, duplicate checking, and status verification. These must live in the service layer per DECISION-003.
+
+### Decision
+Create `server/src/services/authService.ts` as a class-based singleton (matching `categoryService.ts` pattern) containing:
+- `register(data)` — duplicate check, hash, create user, generate JWT
+- `login(email, password)` — find user, check status, compare password, generate JWT
+- `getMe(userId)` — fetch user profile by ID
+
+### Alternatives considered
+- **Option A:** Put auth logic directly in the controller.
+- **Option B:** Create a standalone utility module for auth functions.
+- **Option C:** Class-based service singleton matching existing patterns.
+
+### Why this approach
+- Follows the established `categoryService.ts` class singleton pattern exactly.
+- Keeps controllers thin (HTTP parameter extraction + response formatting only).
+- Auth business logic is testable in isolation from Express request/response.
+
+### Files/modules affected
+- `server/src/services/authService.ts` (new)
+
+### Reversal difficulty
+Low
+
+---
+
+## DECISION-021 — Stale JWT Handling Without Token Blocklist
+
+Date: 2026-08-20
+Phase: Phase 3B — Backend Authentication
+Status: Accepted
+
+### Context
+When a user's status changes to SUSPENDED or BANNED after login, their existing JWT remains valid until expiration. The preflight architecture decided against a token blocklist (requires Redis) for V1.
+
+### Decision
+On every protected request, `authenticateToken` middleware re-fetches the user from the database and checks `user.status`. If status is not `ACTIVE`, the request is rejected with 403. This provides near-real-time enforcement without a blocklist.
+
+### Alternatives considered
+- **Option A:** Redis-based token blocklist (reject immediately).
+- **Option B:** Re-fetch user status on every protected request.
+- **Option C:** Embed status in JWT and never re-check (fast but stale).
+
+### Why this approach
+- One additional DB query per protected request is acceptable for a portfolio project.
+- No new infrastructure (Redis) required.
+- Suspended/banned users lose access within seconds of the status change.
+
+### Why not the alternatives
+- Redis adds V1 infrastructure complexity per DECISION-005.
+- Embedding status in JWT means a banned user retains access until token expires (unacceptable).
+
+### Files/modules affected
+- `server/src/middleware/authenticateToken.ts`
+
+### Consequences
+- Slight performance overhead (one `findUnique` per protected request).
+- Accurate, real-time authorization enforcement.
+
+### Reversal difficulty
+Low
+

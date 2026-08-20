@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import healthRoutes from './routes/healthRoutes';
 import categoryRoutes from './routes/categoryRoutes';
+import authRoutes from './routes/authRoutes';
 import { errorHandler } from './middleware/errorHandler';
 import { env } from './config/env';
 
@@ -23,6 +24,7 @@ export const createApp = (): Application => {
 
   // API Routes
   app.use('/api', healthRoutes);
+  app.use('/api/auth', authRoutes);
   app.use('/api/categories', categoryRoutes);
 
   // Global Error Handler

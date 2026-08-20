@@ -365,3 +365,206 @@ ReportStatus:   PENDING, UNDER_REVIEW, RESOLVED, DISMISSED
 - 12 unique constraints enforced
 - 19 indexes created
 - Seed data: 9 categories, 3 users, 2 articles, 1 challenge, 1 vote
+
+---
+
+## 11. Phase 3B — Backend Authentication Execution Flows
+
+### 11.1 Registration Flow
+
+```text
+HTTP Request: POST /api/auth/register
+  Body: { name, username, email, password }
+    │
+    ▼
+authRoutes.ts
+    │  router.post('/register', validate(registerSchema), authController.register)
+    ▼
+validate.ts (Zod Middleware)
+    │  Validates req.body against registerSchema:
+    │    - name: string, 1-100 chars
+    │    - username: string, 3-30 chars, alphanumeric + underscore
+    │    - email: valid email format
+    │    - password: string, 8-128 chars
+    │  On failure → 400 VALIDATION_ERROR
+    ▼
+authController.register()
+    │  Extracts req.body as RegisterInput
+    │  Calls authService.register(data)
+    ▼
+authService.register()
+    │  1. prisma.user.findUnique({ where: { email } })
+    │     → If exists → throw AppError(409, 'EMAIL_EXISTS')
+    │  2. prisma.user.findUnique({ where: { username } })
+    │     → If exists → throw AppError(409, 'USERNAME_EXISTS')
+    │  3. bcrypt.hash(password, 12) → passwordHash
+    │  4. prisma.user.create({ name, username, email, passwordHash, role: USER, status: ACTIVE })
+    │  5. jwt.sign({ userId, role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN })
+    │  6. Return { user: { id, name, username, email, role }, token }
+    ▼
+authController.register()
+    │  Returns 201: { success: true, data: { user, token } }
+```
+
+### 11.2 Login Flow
+
+```text
+HTTP Request: POST /api/auth/login
+  Body: { email, password }
+    │
+    ▼
+authRoutes.ts
+    │  router.post('/login', validate(loginSchema), authController.login)
+    ▼
+validate.ts (Zod Middleware)
+    │  Validates req.body against loginSchema:
+    │    - email: valid email format
+    │    - password: non-empty string
+    │  On failure → 400 VALIDATION_ERROR
+    ▼
+authController.login()
+    │  Extracts { email, password } from req.body
+    │  Calls authService.login(email, password)
+    ▼
+authService.login()
+    │  1. prisma.user.findUnique({ where: { email }, select: { ...all auth fields } })
+    │     → If not found → throw AppError(401, 'INVALID_CREDENTIALS')
+    │  2. Check user.status
+    │     → If SUSPENDED → throw AppError(403, 'ACCOUNT_SUSPENDED')
+    │     → If BANNED → throw AppError(403, 'ACCOUNT_BANNED')
+    │  3. bcrypt.compare(password, user.passwordHash)
+    │     → If mismatch → throw AppError(401, 'INVALID_CREDENTIALS')
+    │  4. jwt.sign({ userId, role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN })
+    │  5. Return { user: { id, name, username, email, role }, token }
+    ▼
+authController.login()
+    │  Returns 200: { success: true, data: { user, token } }
+```
+
+### 11.3 Protected Request Flow
+
+```text
+HTTP Request to any protected endpoint
+  Header: Authorization: Bearer <jwt_token>
+    │
+    ▼
+authRoutes.ts
+    │  router.get('/me', authenticateToken, authController.getMe)
+    ▼
+authenticateToken middleware
+    │  1. Read req.headers.authorization
+    │     → If missing → throw AppError(401, 'TOKEN_MISSING')
+    │  2. Split "Bearer <token>" → extract token
+    │     → If empty → throw AppError(401, 'TOKEN_MISSING')
+    │  3. jwt.verify(token, JWT_SECRET)
+    │     → If TokenExpiredError → throw AppError(401, 'TOKEN_EXPIRED')
+    │     → If JsonWebTokenError → throw AppError(401, 'TOKEN_INVALID')
+    │  4. Extract decoded.userId from JWT payload
+    │  5. prisma.user.findUnique({ where: { id }, select: { id, username, email, role, status } })
+    │     → If not found → throw AppError(401, 'USER_NOT_FOUND')
+    │  6. Check user.status !== ACTIVE
+    │     → If SUSPENDED → throw AppError(403, 'ACCOUNT_SUSPENDED')
+    │     → If BANNED → throw AppError(403, 'ACCOUNT_BANNED')
+    │  7. Attach user to req.user
+    ▼
+authController.getMe()
+    │  Reads req.user.id
+    │  Calls authService.getMe(userId)
+    ▼
+authService.getMe()
+    │  1. prisma.user.findUnique({ where: { id }, select: { profile fields } })
+    │     → If not found → throw AppError(404, 'USER_NOT_FOUND')
+    │  2. Return full user profile (no passwordHash)
+    ▼
+authController.getMe()
+    │  Returns 200: { success: true, data: { id, name, username, email, role, ... } }
+```
+
+### 11.4 Role-Based Authorization Flow (requireRole middleware)
+
+```text
+Request reaches route with requireRole middleware
+    │
+    ▼
+authenticateToken (runs first)
+    │  Verifies JWT → attaches req.user
+    ▼
+requireRole('ADMIN') (runs second)
+    │  1. Check req.user exists
+    │     → If not → throw AppError(401, 'TOKEN_MISSING')
+    │  2. Check req.user.role in allowedRoles
+    │     → If not in list → throw AppError(403, 'INSUFFICIENT_PERMISSIONS')
+    │  3. Call next()
+    ▼
+Controller → Service → Prisma → Database
+```
+
+### 11.5 Error Response Format (Authentication Errors)
+
+```text
+All auth errors follow PRD standard:
+
+{
+  "success": false,
+  "error": {
+    "code": "<ERROR_CODE>",
+    "message": "<Human-readable message>"
+  }
+}
+
+Error codes:
+  VALIDATION_ERROR       → 400 (invalid input)
+  TOKEN_MISSING          → 401 (no Authorization header)
+  TOKEN_INVALID          → 401 (malformed or bad signature)
+  TOKEN_EXPIRED          → 401 (token past expiration)
+  USER_NOT_FOUND         → 401/404 (user does not exist)
+  INVALID_CREDENTIALS    → 401 (wrong email or password)
+  ACCOUNT_SUSPENDED      → 403 (user is suspended)
+  ACCOUNT_BANNED         → 403 (user is banned)
+  INSUFFICIENT_PERMISSIONS → 403 (wrong role)
+  EMAIL_EXISTS           → 409 (duplicate email)
+  USERNAME_EXISTS        → 409 (duplicate username)
+```
+
+### 11.6 Route-to-Controller Relationships (Phase 3B)
+
+```text
+POST /api/auth/register  → validate(registerSchema) → authController.register
+POST /api/auth/login     → validate(loginSchema)    → authController.login
+GET  /api/auth/me        → authenticateToken         → authController.getMe
+```
+
+### 11.7 Function-to-Function Call Map
+
+```text
+authRoutes.ts
+  └── validate.ts          (middleware — schema validation)
+  └── authenticateToken.ts (middleware — JWT verification)
+  └── authController.ts
+        └── authService.ts
+              ├── prisma (database queries)
+              ├── bcrypt (password hashing/comparison)
+              ├── jwt (token generation)
+              ├── AppError (error handling)
+              └── env.ts (JWT_SECRET, JWT_EXPIRES_IN)
+```
+
+### 11.8 Changes Log
+
+### New files introduced
+- `server/src/middleware/validate.ts` — Generic Zod validation middleware
+- `server/src/middleware/authenticateToken.ts` — JWT Bearer token verification
+- `server/src/middleware/requireRole.ts` — Role-based authorization middleware
+- `server/src/validators/authValidators.ts` — Zod schemas for register/login
+- `server/src/services/authService.ts` — Auth business logic (hash, compare, JWT sign)
+- `server/src/controllers/authController.ts` — HTTP handlers for auth endpoints
+- `server/src/routes/authRoutes.ts` — Route definitions for /api/auth/*
+- `server/src/__tests__/auth.test.ts` — 21 integration tests
+- `server/vitest.config.ts` — Vitest configuration
+
+### Files modified
+- `server/src/app.ts` — Added authRoutes import and mount at `/api/auth`
+- `server/src/config/env.ts` — Added `JWT_EXPIRES_IN` environment variable
+- `server/package.json` — Added vitest, supertest, @types/supertest; added test scripts
+- `DECISIONS.md` — Added DECISION-018 through DECISION-021
+- `FLOW.md` — Added Phase 3B execution flows
