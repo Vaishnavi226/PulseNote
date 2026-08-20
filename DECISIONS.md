@@ -972,3 +972,162 @@ Create a reusable `ProtectedRoute` wrapper component that reads `useAuth()` stat
 ### Reversal difficulty
 Low
 
+---
+
+## DECISION-026 — Article Delete Strategy
+
+Date: 2026-08-20
+Phase: Phase 4B — Article API
+
+### Decision
+Hard delete articles with Prisma `onDelete: Cascade` on all relations.
+
+### Rationale
+- Portfolio project — no compliance/legal requirement for soft delete
+- All Article relations (ArticleTag, Comment, Vote, Bookmark, ArticleLike) use `onDelete: Cascade`
+- Hard delete is simple, clean, and doesn't require status field management
+- Cascade ensures no orphaned records
+
+### Why not the alternatives
+- Soft delete adds `deletedAt` column, nullable index, and WHERE clause filtering on every query
+- Archive status adds enum complexity and UI state management
+- Version history is overkill for a portfolio project
+
+### Files/modules affected
+- `server/prisma/schema.prisma` — already has `onDelete: Cascade` on all Article relations
+
+### Consequences
+- Deleted articles are permanently removed
+- All child records (tags, comments, votes, bookmarks) are cascade-deleted
+
+### Reversal difficulty
+Medium (would need to add `deletedAt` column and migration)
+
+---
+
+## DECISION-027 — Slug Uniqueness Strategy
+
+Date: 2026-08-20
+Phase: Phase 4B — Article API
+
+### Decision
+Auto-generate slugs from title with retry-based suffix collision handling. Explicit slugs from create request also get collision handling.
+
+### Rationale
+- User-friendly URL structure: `/articles/my-article-title`
+- Suffix approach: `my-article` → `my-article-1` → `my-article-2` (max 10 retries)
+- Handles race conditions via Prisma `P2002` catch with retry
+- Explicit slugs from authors also get uniqueness enforcement
+
+### Why not the alternatives
+- UUID slugs are ugly and not SEO-friendly
+- Timestamp-based slugs add noise without value
+- Rejecting duplicate titles is hostile UX
+
+### Files/modules affected
+- `server/src/services/articleService.ts` — `generateSlug()` and `generateUniqueSlug()` functions
+
+### Consequences
+- Slugs are unique across all articles (not scoped to author)
+- Deleted article slugs become available again (hard delete)
+
+### Reversal difficulty
+Low
+
+---
+
+## DECISION-028 — Optional Authentication for Public Endpoints
+
+Date: 2026-08-20
+Phase: Phase 4B — Article API
+
+### Decision
+Create `optionalAuthenticateToken` middleware that attempts JWT verification but continues without `req.user` on failure.
+
+### Rationale
+- GET `/api/articles` and GET `/api/articles/:slug` must be public (no token required)
+- But when an author is authenticated, they should see their own drafts
+- `authenticateToken` middleware fails hard on missing/invalid token — can't be reused
+- `optionalAuth` tries auth, continues without user context on any failure
+
+### Why not the alternatives
+- Separate endpoints for public/authenticated is duplication
+- Modifying `authenticateToken` to be optional would break existing auth guarantees
+- Query parameter for user ID is insecure
+
+### Files/modules affected
+- `server/src/middleware/optionalAuth.ts` (new)
+- `server/src/routes/articleRoutes.ts` (applied to GET list and GET slug)
+
+### Consequences
+- GET endpoints work with or without token
+- Visibility filtering uses `req.user` if present, defaults to public view if absent
+
+### Reversal difficulty
+Low
+
+---
+
+## DECISION-029 — Article API Layering Pattern
+
+Date: 2026-08-20
+Phase: Phase 4B — Article API
+
+### Decision
+Follow the same Validator → Service → Controller → Routes pattern established by the Auth feature.
+
+### Rationale
+- Consistency with existing codebase
+- Separation of concerns: validation, business logic, HTTP handling, routing
+- Services are testable independently of Express
+- Controllers are thin — just extract params and call service
+
+### Why not the alternatives
+- Route handlers with inline logic don't scale
+- Controller-only pattern mixes HTTP concerns with business logic
+- Service + repository adds a layer without benefit for direct Prisma queries
+
+### Files/modules affected
+- `server/src/validators/articleValidators.ts`
+- `server/src/services/articleService.ts`
+- `server/src/controllers/articleController.ts`
+- `server/src/routes/articleRoutes.ts`
+
+### Consequences
+- Article API follows established pattern exactly
+- Easy to extend with new endpoints
+
+### Reversal difficulty
+Low
+
+---
+
+## DECISION-030 — Visibility Filtering at DB Level
+
+Date: 2026-08-20
+Phase: Phase 4B — Article API
+
+### Decision
+Apply article visibility filtering directly in the Prisma query via `OR` clauses, not as post-fetch filtering.
+
+### Rationale
+- Efficient: database filters before transferring data
+- Correct: pagination counts are accurate (filtered at source)
+- Consistent: single query returns correct data and total count
+- Author visibility: `{ OR: [{ status: PUBLISHED }, { authorId: userId }] }`
+
+### Why not the alternatives
+- Post-filtering breaks pagination (total count is wrong)
+- Fetching all and filtering in Node.js wastes bandwidth and memory
+- Two queries (one public, one for author) add complexity
+
+### Files/modules affected
+- `server/src/services/articleService.ts` — `buildVisibilityWhere()` method
+
+### Consequences
+- Pagination is accurate for all user roles
+- Query complexity is slightly higher but Prisma handles it well
+
+### Reversal difficulty
+Low
+

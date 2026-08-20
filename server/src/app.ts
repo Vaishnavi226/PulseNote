@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import healthRoutes from './routes/healthRoutes';
 import categoryRoutes from './routes/categoryRoutes';
 import authRoutes from './routes/authRoutes';
+import articleRoutes from './routes/articleRoutes';
 import { errorHandler } from './middleware/errorHandler';
 import { env } from './config/env';
 
@@ -26,6 +27,7 @@ export const createApp = (): Application => {
   app.use('/api', healthRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/categories', categoryRoutes);
+  app.use('/api/articles', articleRoutes);
 
   // Global Error Handler
   app.use(errorHandler);

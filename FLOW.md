@@ -724,3 +724,111 @@ AuthProvider placement ensures:
 - `client/src/components/common/Navbar.tsx` — Added conditional auth/unauth UI, avatar menu, logout
 - `DECISIONS.md` — Added DECISION-022 through DECISION-025
 - `FLOW.md` — Added Phase 3C execution flows
+
+---
+
+## 13. Phase 4B — Article API Execution Flows
+
+### 13.1 Article List (GET /api/articles)
+
+```
+Client → Express Router → optionalAuthenticateToken → validate(query) → articleController.list → articleService.listArticles
+```
+
+1. `optionalAuthenticateToken`: tries JWT verification; sets `req.user` if valid, continues without if missing/invalid
+2. `validate(articleListQuerySchema, 'query')`: coerces `page`/`limit` to numbers, validates sort enum, stores parsed values back on `req.query`
+3. `articleController.list`: extracts query params, calls `articleService.listArticles`
+4. `articleService.listArticles`:
+   - Builds visibility WHERE: public → `{ status: PUBLISHED }`, author → `{ OR: [PUBLISHED, own] }`, admin → `{}`
+   - Builds filter WHERE: category, search (ILIKE on title+excerpt), tag
+   - Executes `Promise.all([findMany, count])` with pagination (skip/take)
+   - Returns `{ articles, pagination: { page, limit, total, totalPages } }`
+
+### 13.2 Article Detail (GET /api/articles/:slug)
+
+```
+Client → Express Router → optionalAuthenticateToken → articleController.getBySlug → articleService.getBySlug
+```
+
+1. `optionalAuthenticateToken`: same as above
+2. `articleController.getBySlug`: extracts slug, calls service
+3. `articleService.getBySlug`:
+   - Builds visibility WHERE (same as list)
+   - Queries by slug with author, category, tags, counts
+   - Returns 404 if not found or not visible
+
+### 13.3 Article Creation (POST /api/articles)
+
+```
+Client → Express Router → authenticateToken → requireRole(AUTHOR) → validate(body) → articleController.create → articleService.createArticle
+```
+
+1. `authenticateToken`: verifies JWT, sets `req.user`
+2. `requireRole(AUTHOR)`: checks `req.user.role ∈ [AUTHOR, MODERATOR, ADMIN]`
+3. `validate(articleCreateBodySchema)`: validates title, content, categoryId, optional fields
+4. `articleService.createArticle`:
+   - Verifies category exists
+   - Generates slug from title (or uses explicit slug)
+   - Enforces slug uniqueness with retry
+   - Creates article with DRAFT status
+   - Optionally connects tags via `articleTags`
+
+### 13.4 Article Update (PATCH /api/articles/:id)
+
+```
+Client → Express Router → authenticateToken → requireRole(AUTHOR) → validate(body) → articleController.update → articleService.updateArticle
+```
+
+1. Auth + role check
+2. `validate(articleUpdateBodySchema)`: all fields optional
+3. `articleService.updateArticle`:
+   - Fetches article to check ownership (author: own only, mod/admin: any)
+   - Updates provided fields
+   - If `tagIds` provided: disconnects all existing tags, connects new ones
+   - Returns 403 if not authorized
+
+### 13.5 Article Publish/Unpublish (PATCH /api/articles/:id/publish)
+
+```
+Client → Express Router → authenticateToken → requireRole(AUTHOR) → articleController.publish → articleService.togglePublish
+```
+
+1. Auth + role check
+2. `articleService.togglePublish`:
+   - Fetches article to check ownership
+   - Toggles: DRAFT → PUBLISHED (sets `publishedAt`), PUBLISHED → DRAFT
+   - Returns 403 if not authorized
+
+### 13.6 Article Delete (DELETE /api/articles/:id)
+
+```
+Client → Express Router → authenticateToken → requireRole(AUTHOR) → articleController.remove → articleService.deleteArticle
+```
+
+1. Auth + role check
+2. `articleService.deleteArticle`:
+   - Fetches article to check ownership
+   - Hard deletes with `prisma.article.delete`
+   - Cascade deletes all child records
+   - Returns 403 if not authorized
+
+### 13.7 Validate Middleware Fix
+
+```
+Before: schema.parse(req[source]) → discarded result → req[source] retains raw strings
+After:  parsed = schema.parse(req[source]) → req[source] = parsed → coerced values available
+```
+
+This fix ensures all Zod coercions (e.g., `z.coerce.number()` for query params) are available to downstream handlers.
+
+---
+
+## 14. Decisions Referenced in Phase 4B
+
+| Decision | Topic |
+|---|---|
+| DECISION-026 | Article delete strategy (hard delete with cascade) |
+| DECISION-027 | Slug uniqueness (auto-generate with retry suffix) |
+| DECISION-028 | Optional authentication for public endpoints |
+| DECISION-029 | Article API layering pattern (Validator → Service → Controller → Routes) |
+| DECISION-030 | Visibility filtering at DB level (Prisma OR clauses) |
