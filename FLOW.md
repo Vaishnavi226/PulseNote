@@ -568,3 +568,159 @@ authRoutes.ts
 - `server/package.json` — Added vitest, supertest, @types/supertest; added test scripts
 - `DECISIONS.md` — Added DECISION-018 through DECISION-021
 - `FLOW.md` — Added Phase 3B execution flows
+
+---
+
+## 12. Phase 3C — Frontend Authentication Execution Flows
+
+### 12.1 App Startup — AuthProvider Session Restoration
+
+```
+App.tsx
+  └─ QueryClientProvider
+       └─ AuthProvider (isLoading=true, user=null)
+            ├─ useEffect on mount:
+            │    ├─ authService.getToken()
+            │    ├─ if no token → setIsLoading(false), return
+            │    ├─ if token exists → authService.getMe()
+            │    │    ├─ success → setUser(data.user), setIsLoading(false)
+            │    │    └─ failure → removeToken(), setUser(null), setIsLoading(false)
+            └─ useEffect: subscribe to authEvents.onInvalid → setUser(null)
+
+PulseThemeProvider
+  └─ BrowserRouter
+       └─ AppRoutes
+            └─ Navbar reads useAuth() → renders auth/unauth UI
+```
+
+### 12.2 Registration Flow
+
+```
+RegisterPage
+  └─ react-hook-form + Zod schema
+       ├─ name: string (1-100 chars)
+       ├─ username: string (3-30 chars, alphanumeric + underscore)
+       ├─ email: string (valid email)
+       ├─ password: string (8-128 chars)
+       └─ confirmPassword: string (must match password)
+  └─ onSubmit → auth.register({ name, username, email, password })
+       ├─ authService.register(payload)
+       │    └─ axiosClient.post('/api/auth/register', payload)
+       │         ├─ success → authService.setToken(response.data.data.token)
+       │         │              → setUser(response.data.data.user)
+       │         │              → return user
+       │         └─ failure → throw error (mapped to user-friendly message)
+       ├─ on success → navigate('/', { replace: true })
+       └─ on failure → setServerError(errorData.code)
+            ├─ EMAIL_EXISTS → "An account with this email already exists."
+            ├─ USERNAME_EXISTS → "This username is already taken."
+            ├─ VALIDATION_ERROR → "Please check your input and try again."
+            └─ default → "Something went wrong. Please try again later."
+```
+
+### 12.3 Login Flow
+
+```
+LoginPage
+  └─ react-hook-form + Zod schema
+       ├─ email: string (valid email)
+       └─ password: string (min 1 char)
+  └─ onSubmit → auth.login({ email, password })
+       ├─ authService.login(payload)
+       │    └─ axiosClient.post('/api/auth/login', payload)
+       │         ├─ success → authService.setToken(response.data.data.token)
+       │         │              → setUser(response.data.data.user)
+       │         │              → return user
+       │         └─ failure → throw error
+       ├─ on success → navigate('/', { replace: true })
+       └─ on failure → setServerError(errorData.code)
+            ├─ INVALID_CREDENTIALS → "Invalid email or password. Please try again."
+            ├─ ACCOUNT_SUSPENDED → "Your account has been suspended..."
+            ├─ ACCOUNT_BANNED → "Your account has been banned..."
+            └─ default → "Something went wrong. Please try again later."
+```
+
+### 12.4 Logout Flow
+
+```
+Navbar
+  └─ User clicks Avatar → Menu opens
+       └─ "Sign Out" MenuItem
+            └─ handleLogout()
+                 ├─ auth.logout()
+                 │    ├─ authService.removeToken()
+                 │    └─ setUser(null)
+                 └─ navigate('/', { replace: true })
+```
+
+### 12.5 401 Decoupled Auth Clearing Flow
+
+```
+Any API request (via axiosClient)
+  └─ Response interceptor
+       └─ if response.status === 401
+            ├─ localStorage.removeItem('pn_auth_token')
+            └─ authEvents.emitInvalid()
+                 └─ window.dispatchEvent(new CustomEvent('pn:auth:invalid'))
+
+AuthProvider (subscribes on mount)
+  └─ window.addEventListener('pn:auth:invalid', handler)
+       └─ handler → setUser(null)
+            └─ Components re-render:
+                 ├─ Navbar shows Log In / Sign Up buttons
+                 └─ ProtectedRoute redirects to /login
+```
+
+### 12.6 Protected Route Flow
+
+```
+Navigate to /write (or any protected route)
+  └─ AppRoutes
+       └─ <ProtectedRoute>
+            └─ useAuth()
+                 ├─ isLoading=true → <LoadingState />
+                 ├─ isAuthenticated=true → {children}
+                 └─ isAuthenticated=false → <Navigate to="/login" replace />
+```
+
+### 12.7 Page Pre-fills
+
+- `/login?prefill=john@doe.com` → email field pre-filled with `john@doe.com`
+- `/register?prefill=john@doe.com` → email field pre-filled with `john@doe.com`
+
+### 12.8 Component Mount Order (App.tsx)
+
+```
+App
+  └─ QueryClientProvider (no auth dependency)
+       └─ AuthProvider (session restoration begins)
+            └─ PulseThemeProvider (no auth dependency)
+                 └─ BrowserRouter
+                      └─ AppRoutes
+                           └─ Navbar (reads auth state)
+```
+
+AuthProvider placement ensures:
+1. Auth state is available before any route renders.
+2. Theme and router work regardless of auth state.
+3. QueryClient has no circular dependency on auth.
+
+### 12.9 Changes Log
+
+### New files introduced
+- `client/src/features/auth/types.ts` — TypeScript interfaces matching backend auth shapes
+- `client/src/features/auth/authService.ts` — API calls (register, login, getMe) + token management
+- `client/src/features/auth/authEvents.ts` — Decoupled CustomEvent mechanism for 401 notification
+- `client/src/features/auth/AuthContext.tsx` — React Context provider (user, isLoading, login, register, logout)
+- `client/src/features/auth/useAuth.ts` — Custom hook wrapping AuthContext
+- `client/src/components/auth/ProtectedRoute.tsx` — Route guard component
+- `client/src/pages/LoginPage.tsx` — Login form (react-hook-form + Zod + MUI)
+- `client/src/pages/RegisterPage.tsx` — Registration form (react-hook-form + Zod + MUI)
+
+### Files modified
+- `client/src/api/axiosClient.ts` — Added `authEvents.emitInvalid()` call on 401
+- `client/src/App.tsx` — Wrapped with `AuthProvider`
+- `client/src/pages/AppRoutes.tsx` — Added `/login`, `/register` routes; added `ProtectedRoute` wrapper
+- `client/src/components/common/Navbar.tsx` — Added conditional auth/unauth UI, avatar menu, logout
+- `DECISIONS.md` — Added DECISION-022 through DECISION-025
+- `FLOW.md` — Added Phase 3C execution flows

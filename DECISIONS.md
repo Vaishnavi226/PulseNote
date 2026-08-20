@@ -810,3 +810,165 @@ On every protected request, `authenticateToken` middleware re-fetches the user f
 ### Reversal difficulty
 Low
 
+---
+
+## DECISION-022 — React Context for Frontend Authentication State
+
+Date: 2026-08-20
+Phase: Phase 3C — Frontend Authentication
+Status: Accepted
+
+### Context
+Frontend authentication requires managing current user state, login/logout actions, and session restoration across the component tree. The app must know whether the user is authenticated to conditionally render Navbar, protect routes, and restore sessions on mount.
+
+### Decision
+Use React Context (`AuthContext`) with `useState` + `useCallback` hooks to manage authentication state. Expose `user`, `isLoading`, `isAuthenticated`, `login()`, `register()`, and `logout()` via context. Place `AuthProvider` inside `QueryClientProvider` but outside `PulseThemeProvider` and `BrowserRouter`.
+
+### Alternatives considered
+- **Option A:** Redux Toolkit with auth slice.
+- **Option B:** TanStack Query for auth state management.
+- **Option C:** React Context with useState/useCallback.
+
+### Why this approach
+- Matches the existing ThemeProvider pattern exactly — the project already uses React Context for theme state.
+- Auth state is primarily client-owned (user object, loading flag) — not a server-state cache problem.
+- Zero new dependencies required.
+- Simple, readable, easy to explain in interviews.
+
+### Why not the alternatives
+- Redux adds unnecessary global state boilerplate for a single auth context.
+- TanStack Query is designed for server state caching, not client-side authentication state transitions (login/logout).
+
+### Files/modules affected
+- `client/src/features/auth/AuthContext.tsx` (new)
+- `client/src/features/auth/useAuth.ts` (new)
+- `client/src/App.tsx` (modified — AuthProvider wrapping)
+
+### Consequences
+- All components access auth state via `useAuth()` hook.
+- No prop drilling for auth state.
+
+### Reversal difficulty
+Low
+
+---
+
+## DECISION-023 — localStorage for JWT Token Persistence (V1)
+
+Date: 2026-08-20
+Phase: Phase 3C — Frontend Authentication
+Status: Accepted
+
+### Context
+The JWT token must persist across browser sessions for a reasonable user experience. Three storage mechanisms were evaluated.
+
+### Decision
+Use `localStorage` with key `pn_auth_token`. The existing `axiosClient` request interceptor already reads from this key, and the response interceptor already removes it on 401.
+
+### Alternatives considered
+- **Option A:** localStorage (persist across sessions, vulnerable to XSS).
+- **Option B:** sessionStorage (cleared on tab close, same XSS vulnerability).
+- **Option C:** HttpOnly cookie (best XSS protection, requires backend rewrite).
+
+### Why this approach
+- Already implemented in `axiosClient.ts` — zero new code needed for token attachment.
+- Session persistence is expected UX for a publishing platform.
+- For a portfolio/resume project, the XSS trade-off is documented and acceptable.
+
+### Why not the alternatives
+- sessionStorage provides no meaningful XSS advantage over localStorage — both are accessible to injected JavaScript. The only difference is persistence, which degrades UX.
+- HttpOnly cookies require backend changes (Set-Cookie headers, CSRF protection, SameSite configuration) that constitute a Phase 3B rewrite, disproportionate for V1.
+
+### Files/modules affected
+- `client/src/features/auth/authService.ts` (uses existing localStorage key)
+- `client/src/api/axiosClient.ts` (unchanged — already uses pn_auth_token)
+
+### Consequences
+- Token survives browser close/reopen.
+- XSS vulnerability is a documented known limitation.
+- Phase 2+ can evaluate HttpOnly cookie migration if the project evolves.
+
+### Reversal difficulty
+Low
+
+---
+
+## DECISION-024 — Decoupled Auth-State Notification via CustomEvent (axiosClient ↔ AuthProvider)
+
+Date: 2026-08-20
+Phase: Phase 3C — Frontend Authentication
+Status: Accepted
+
+### Context
+When the axios response interceptor detects a 401, it removes the token from localStorage. However, the React AuthContext's `user` state is still set. The AuthProvider must be notified to clear its state. Directly importing AuthContext into axiosClient creates a circular dependency:
+`axiosClient → AuthContext → authService → axiosClient`.
+
+### Decision
+Use a browser-level `CustomEvent` mechanism. `axiosClient` emits a `pn:auth:invalid` event via `window.dispatchEvent(new CustomEvent(...))`. `AuthProvider` subscribes to this event via `window.addEventListener` in a `useEffect` and calls `setUser(null)` when received. The event utility is encapsulated in `authEvents.ts`.
+
+### Alternatives considered
+- **Option A:** Import AuthContext directly in axiosClient (creates circular dependency).
+- **Option B:** Export a standalone `setAuthUser` function from AuthContext module (still tight coupling).
+- **Option C:** CustomEvent via window (decoupled, zero dependencies, simple).
+
+### Why this approach
+- Zero coupling between axiosClient and AuthContext — neither imports the other.
+- CustomEvent is a standard browser API, no libraries needed.
+- Easy to test, debug, and document.
+- AuthProvider cleanup function unsubscribes on unmount.
+
+### Why not the alternatives
+- Circular dependency breaks module resolution and makes the codebase fragile.
+- Standalone setter functions still create import-order dependencies.
+
+### Files/modules affected
+- `client/src/features/auth/authEvents.ts` (new — event utility)
+- `client/src/api/axiosClient.ts` (modified — imports authEvents, emits on 401)
+- `client/src/features/auth/AuthContext.tsx` (modified — subscribes to event)
+
+### Consequences
+- Auth state is cleared immediately on 401, even from non-auth API calls.
+- No circular imports.
+
+### Reversal difficulty
+Low
+
+---
+
+## DECISION-025 — Protected Route Wrapper Component
+
+Date: 2026-08-20
+Phase: Phase 3C — Frontend Authentication
+Status: Accepted
+
+### Context
+Multiple routes will require authentication (write, settings, profile edit). Each route should not duplicate authentication checking logic.
+
+### Decision
+Create a reusable `ProtectedRoute` wrapper component that reads `useAuth()` state and either renders children, shows a loading state, or redirects to `/login`. Wrap protected routes in `AppRoutes.tsx` using `<ProtectedRoute>{children}</ProtectedRoute>`.
+
+### Alternatives considered
+- **Option A:** Check auth in every page component individually.
+- **Option B:** Centralized route-level auth configuration object.
+- **Option C:** Reusable wrapper component.
+
+### Why this approach
+- Follows React Router v7 composition patterns.
+- Single source of truth for protected route logic.
+- Loading state handled once, prevents authentication flash.
+- Easy to extend with role-based checks later.
+
+### Why not the alternatives
+- Per-page auth checks duplicate logic and risk inconsistency.
+- Configuration objects add abstraction without benefit for 2-3 protected routes.
+
+### Files/modules affected
+- `client/src/components/auth/ProtectedRoute.tsx` (new)
+- `client/src/pages/AppRoutes.tsx` (modified — wraps protected routes)
+
+### Consequences
+- All protected routes use the same loading/redirect logic.
+
+### Reversal difficulty
+Low
+

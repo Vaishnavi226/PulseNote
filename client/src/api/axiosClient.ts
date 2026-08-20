@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { authEvents } from '../features/auth/authEvents';
 
 const baseURL = import.meta.env.VITE_API_URL || '/api';
 
@@ -26,8 +27,8 @@ axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid - clear stored auth token
       localStorage.removeItem('pn_auth_token');
+      authEvents.emitInvalid();
     }
     return Promise.reject(error);
   }

@@ -1,12 +1,16 @@
 import React from 'react';
-import { Box, Typography, Button, IconButton, Container } from '@mui/material';
-import { Link as RouterLink, useLocation } from 'react-router-dom';
+import { Box, Typography, Button, IconButton, Container, Avatar, Menu, MenuItem } from '@mui/material';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { Sun, Moon, Sparkles } from 'lucide-react';
 import { usePulseTheme } from '../../theme/ThemeProvider';
+import { useAuth } from '../../features/auth/useAuth';
 
 export const Navbar: React.FC = () => {
   const { mode, toggleTheme } = usePulseTheme();
+  const { user, isAuthenticated, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
 
   const navItems = [
     { label: 'Home', path: '/' },
@@ -14,6 +18,20 @@ export const Navbar: React.FC = () => {
     { label: 'Trending', path: '/trending' },
     { label: 'Challenges', path: '/challenges' },
   ];
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    handleMenuClose();
+    logout();
+    navigate('/', { replace: true });
+  };
 
   return (
     <Box
@@ -103,16 +121,84 @@ export const Navbar: React.FC = () => {
               {mode === 'light' ? <Moon size={20} /> : <Sun size={20} />}
             </IconButton>
 
-            <Button
-              component={RouterLink}
-              to="/write"
-              variant="contained"
-              color="primary"
-              size="small"
-              sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
-            >
-              Write Note
-            </Button>
+            {isAuthenticated && user ? (
+              <>
+                <Button
+                  component={RouterLink}
+                  to="/write"
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                  sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
+                >
+                  Write Note
+                </Button>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <IconButton onClick={handleMenuOpen} size="small">
+                    <Avatar
+                      sx={{
+                        width: 34,
+                        height: 34,
+                        bgcolor: 'secondary.main',
+                        color: '#fff',
+                        fontSize: '0.875rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {user.name.charAt(0).toUpperCase()}
+                    </Avatar>
+                  </IconButton>
+                  <Menu
+                    anchorEl={anchorEl}
+                    open={Boolean(anchorEl)}
+                    onClose={handleMenuClose}
+                    transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                    anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                    slotProps={{
+                      paper: {
+                        sx: { mt: 1, minWidth: 160 },
+                      },
+                    }}
+                  >
+                    <MenuItem disabled>
+                      <Typography variant="body2" color="text.secondary">
+                        {user.name}
+                      </Typography>
+                    </MenuItem>
+                    <MenuItem onClick={handleLogout}>
+                      <Typography variant="body2">Sign Out</Typography>
+                    </MenuItem>
+                  </Menu>
+                </Box>
+              </>
+            ) : (
+              <>
+                <Button
+                  component={RouterLink}
+                  to="/login"
+                  variant="text"
+                  size="small"
+                  sx={{
+                    display: { xs: 'none', sm: 'inline-flex' },
+                    color: 'text.secondary',
+                    fontWeight: 600,
+                  }}
+                >
+                  Log In
+                </Button>
+                <Button
+                  component={RouterLink}
+                  to="/register"
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                  sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
+                >
+                  Sign Up
+                </Button>
+              </>
+            )}
           </Box>
         </Box>
       </Container>
