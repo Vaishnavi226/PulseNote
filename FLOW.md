@@ -832,3 +832,101 @@ This fix ensures all Zod coercions (e.g., `z.coerce.number()` for query params) 
 | DECISION-028 | Optional authentication for public endpoints |
 | DECISION-029 | Article API layering pattern (Validator → Service → Controller → Routes) |
 | DECISION-030 | Visibility filtering at DB level (Prisma OR clauses) |
+
+---
+
+## 15. Phase 4C — Article Frontend Integration Execution Flows
+
+### 15.1 Article List (HomePage, ExplorePage, TrendingPage)
+
+```
+Page Component (useState for query params)
+  → useArticleList({ page, limit, sort, category, search })
+    → TanStack Query (queryKey: ['articles', query])
+      → articleService.listArticles(query)
+        → axiosClient.get('/articles', { params })
+          → GET /api/articles?limit=6&sort=latest
+            → Backend: optionalAuth → validate(query) → controller → service → Prisma
+              → Response: { success, data: { articles, pagination } }
+                → TanStack Query caches, provides { data, isLoading, isError, error }
+                  → ArticleList component renders ArticleCards
+```
+
+### 15.2 Article Detail (ArticleDetailPage)
+
+```
+ArticleDetailPage ( useParams → slug )
+  → useArticleDetail(slug)
+    → TanStack Query (queryKey: ['article', slug])
+      → articleService.getArticleBySlug(slug)
+        → axiosClient.get(`/articles/${slug}`)
+          → GET /api/articles/:slug
+            → Backend: optionalAuth → controller → service → Prisma (includes content)
+              → Response: { success, data: { ...article, content, author.bio } }
+                → TanStack Query caches, provides { data, isLoading, isError }
+                  → ArticleDetailPage renders title, author, content, tags, stats
+```
+
+### 15.3 Category Filter
+
+```
+CategoryFilter component
+  → useCategories()
+    → TanStack Query (queryKey: ['categories'], staleTime: 30min)
+      → articleService.getCategories()
+        → axiosClient.get('/categories')
+          → GET /api/categories
+            → Response: { success, data: [{ id, name, slug }] }
+              → Renders horizontal Chip list
+              → On chip click: updateParams({ category: slug })
+                → URL search params update → useArticleList re-fetches with new category
+```
+
+### 15.4 Search Flow
+
+```
+ExplorePage
+  → TextField (local state: searchInput)
+  → On form submit: updateParams({ search: searchInput || null })
+    → URL search params update (page resets to 1)
+      → useArticleList({ search: 'query', page: 1, ... })
+        → GET /api/articles?search=query&page=1
+          → Backend: Prisma ILIKE on title + excerpt
+            → Filtered results returned
+```
+
+### 15.5 Pagination Flow
+
+```
+ExplorePage
+  → Pagination component (count from data.pagination.totalPages)
+  → On page change: updateParams({ page: String(page) })
+    → URL search params update
+      → useArticleList({ page: N, ... })
+        → GET /api/articles?page=N&limit=12
+          → Backend: Prisma skip/take pagination
+            → New page of results returned
+              → ArticleList re-renders with new articles
+```
+
+### 15.6 Article Card Click
+
+```
+ArticleCard (Paper component={RouterLink} to={`/article/${slug}`})
+  → React Router navigates to /article/:slug
+    → AppRoutes matches /article/:slug → ArticleDetailPage
+      → useArticleDetail(slug) fetches article
+        → Full article rendered
+```
+
+---
+
+## 16. Decisions Referenced in Phase 4C
+
+| Decision | Topic |
+|---|---|
+| DECISION-031 | First TanStack Query usage (server state management) |
+| DECISION-032 | Article Card variants (featured, standard, compact) |
+| DECISION-033 | URL-synced filters (useSearchParams for shareable links) |
+| DECISION-034 | Preformatted Markdown rendering (safe, no XSS) |
+| DECISION-035 | Category filter from API (not hardcoded) |

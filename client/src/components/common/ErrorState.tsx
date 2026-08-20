@@ -23,7 +23,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
         alignItems: 'center',
         textAlign: 'center',
         borderRadius: 4,
-        border: '1px border',
+        border: '1px solid',
         borderColor: 'divider',
         backgroundColor: 'background.paper',
         my: 4,

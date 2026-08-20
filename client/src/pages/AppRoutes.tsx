@@ -6,6 +6,7 @@ import { HomePage } from './HomePage';
 import { ExplorePage } from './ExplorePage';
 import { TrendingPage } from './TrendingPage';
 import { ChallengesPage } from './ChallengesPage';
+import { ArticleDetailPage } from './ArticleDetailPage';
 import { LoginPage } from './LoginPage';
 import { RegisterPage } from './RegisterPage';
 import { NotFoundPage } from './NotFoundPage';
@@ -19,6 +20,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/trending" element={<TrendingPage />} />
         <Route path="/challenges" element={<ChallengesPage />} />
+        <Route path="/article/:slug" element={<ArticleDetailPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 

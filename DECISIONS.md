@@ -1131,3 +1131,167 @@ Apply article visibility filtering directly in the Prisma query via `OR` clauses
 ### Reversal difficulty
 Low
 
+---
+
+## DECISION-031 — First TanStack Query Usage
+
+Date: 2026-08-20
+Phase: Phase 4C — Article Frontend Integration
+
+### Decision
+Use TanStack Query (already configured in App.tsx) for all article-related server state management.
+
+### Rationale
+- Provider was configured but dormant — first real use
+- Automatic caching, deduplication, and background refetch
+- Consistent loading/error/data states across all pages
+- Query keys enable automatic cache invalidation on data changes
+
+### Why not the alternatives
+- useState + useEffect for data fetching doesn't cache or deduplicate
+- SWR is lighter but TanStack Query is already installed
+- Context-based state management adds complexity without caching benefits
+
+### Files/modules affected
+- `client/src/features/articles/hooks.ts` (new)
+- All page components consuming article data
+
+### Consequences
+- All article data is cached for 5 minutes (staleTime)
+- Categories cached for 30 minutes
+- Loading/error states are automatic
+
+### Reversal difficulty
+Low
+
+---
+
+## DECISION-032 — Article Card Variants
+
+Date: 2026-08-20
+Phase: Phase 4C — Article Frontend Integration
+
+### Decision
+Create a single ArticleCard component with three variants: featured, standard, and compact.
+
+### Rationale
+- Reusable across HomePage, ExplorePage, TrendingPage, and future pages
+- Featured variant for hero sections (horizontal layout)
+- Standard variant for grid layouts (vertical card)
+- Compact variant for sidebar lists (small horizontal)
+- Single component ensures visual consistency
+
+### Why not the alternatives
+- Separate components for each variant duplicates shared logic
+- Prop-based variants within one component is simpler to maintain
+- Template pattern (render prop) adds unnecessary abstraction
+
+### Files/modules affected
+- `client/src/features/articles/ArticleCard.tsx` (new)
+- `client/src/features/articles/ArticleList.tsx` (new)
+
+### Consequences
+- All variants handle null coverImageUrl, excerpt, quickTake gracefully
+- All variants link to /article/:slug
+- Responsive: image stacks on mobile for featured variant
+
+### Reversal difficulty
+Low
+
+---
+
+## DECISION-033 — URL-Synced Filters
+
+Date: 2026-08-20
+Phase: Phase 4C — Article Frontend Integration
+
+### Decision
+Sync category, search, sort, and page filters to URL search params via `useSearchParams`.
+
+### Rationale
+- Shareable links: `/explore?category=ai&page=2` works
+- Back/forward browser navigation preserves filters
+- Bookmarks and deep links work correctly
+- No need for global state management for filter state
+
+### Why not the alternatives
+- Component-local state loses filters on navigation
+- Context-based state is overkill for page-level filters
+- Redux/Zustand adds dependency without benefit
+
+### Files/modules affected
+- `client/src/pages/ExplorePage.tsx`
+
+### Consequences
+- Filter state survives page reloads
+- Search input is local state, synced to URL on submit
+
+### Reversal difficulty
+Low
+
+---
+
+## DECISION-034 — Preformatted Markdown Rendering
+
+Date: 2026-08-20
+Phase: Phase 4C — Article Frontend Integration
+
+### Decision
+Render article content as preformatted text with `whiteSpace: 'pre-wrap'` and CSS typography styling, rather than installing a Markdown renderer.
+
+### Rationale
+- Seeded content is Markdown — no renderer exists in project
+- `dangerouslySetInnerHTML` with raw Markdown is unsafe
+- `react-markdown` is a new dependency requiring team decision
+- Preformatted text preserves Markdown formatting as readable text
+- CSS styling provides basic heading/list/code visual hierarchy
+
+### Why not the alternatives
+- `dangerouslySetInnerHTML` with Markdown-to-HTML conversion is XSS-vulnerable
+- `react-markdown` requires adding a dependency and potential SSR considerations
+- Plain text loses all formatting (headings, lists, bold)
+- Custom parser is overkill for a portfolio project
+
+### Files/modules affected
+- `client/src/pages/ArticleDetailPage.tsx`
+
+### Consequences
+- Content is readable and safe
+- Markdown syntax visible as text (# ## ** etc.)
+- Follow-up: install `react-markdown` for proper rendering
+
+### Reversal difficulty
+Low (swap in react-markdown when ready)
+
+---
+
+## DECISION-035 — Category Filter from API
+
+Date: 2026-08-20
+Phase: Phase 4C — Article Frontend Integration
+
+### Decision
+Fetch categories from `GET /api/categories` rather than hardcoding them in the frontend.
+
+### Rationale
+- Categories are stored in the database and managed by admins
+- Adding/removing categories doesn't require frontend redeployment
+- Single source of truth between backend and frontend
+- Categories are cached for 30 minutes (rarely change)
+
+### Why not the alternatives
+- Hardcoded categories risk drift from database
+- Enum in frontend duplicates backend data
+- Config file adds build complexity
+
+### Files/modules affected
+- `client/src/features/articles/hooks.ts` (useCategories)
+- `client/src/features/articles/CategoryFilter.tsx`
+
+### Consequences
+- Category filter automatically reflects database state
+- Empty category list shows no chips (graceful degradation)
+
+### Reversal difficulty
+Low
+
