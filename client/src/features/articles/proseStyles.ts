@@ -1,0 +1,110 @@
+import { SxProps, Theme } from '@mui/material';
+import { tokens } from '../../theme/tokens';
+
+export const proseStyles: SxProps<Theme> = {
+  color: 'text.primary',
+  fontFamily: tokens.fonts.display,
+  fontSize: '1.1875rem',
+  lineHeight: 1.75,
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
+  '& p': {
+    my: 0,
+    mb: '1.4em',
+  },
+  '& h1': {
+    fontFamily: tokens.fonts.display,
+    fontSize: '1.75rem',
+    fontWeight: 600,
+    lineHeight: 1.25,
+    letterSpacing: '-0.01em',
+    mt: '1.8em',
+    mb: '0.7em',
+  },
+  '& h2': {
+    fontFamily: tokens.fonts.display,
+    fontSize: '1.4375rem',
+    fontWeight: 600,
+    lineHeight: 1.3,
+    letterSpacing: '-0.01em',
+    mt: '1.7em',
+    mb: '0.6em',
+  },
+  '& h3': {
+    fontFamily: tokens.fonts.display,
+    fontSize: '1.1875rem',
+    fontWeight: 600,
+    lineHeight: 1.35,
+    mt: '1.5em',
+    mb: '0.5em',
+  },
+  '& strong': {
+    fontWeight: 600,
+  },
+  '& a': {
+    color: 'secondary.dark',
+    textDecoration: 'underline',
+    textDecorationThickness: '1px',
+    textUnderlineOffset: '3px',
+  },
+  '& ul, & ol': {
+    pl: '1.4em',
+    my: 0,
+    mb: '1.4em',
+  },
+  '& li': {
+    mb: '0.45em',
+  },
+  '& li::marker': {
+    color: 'text.muted',
+  },
+  '& code': {
+    fontFamily: "'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
+    fontSize: '0.82em',
+    backgroundColor: 'action.hover',
+    px: '0.35em',
+    py: '0.15em',
+    borderRadius: '4px',
+  },
+  '& pre': {
+    p: 2.5,
+    backgroundColor: 'background.default',
+    border: '1px solid',
+    borderColor: 'divider',
+    borderRadius: tokens.radii.control,
+    overflowX: 'auto',
+    my: '1.6em',
+    '& code': {
+      backgroundColor: 'transparent',
+      px: 0,
+      py: 0,
+      fontSize: '0.875rem',
+    },
+  },
+  '& blockquote': {
+    borderLeft: '2px solid',
+    borderColor: 'secondary.main',
+    pl: 3,
+    pr: 1,
+    ml: 0,
+    mr: 0,
+    my: '1.6em',
+    fontStyle: 'italic',
+    color: 'text.secondary',
+    fontSize: '1.0625rem',
+    '& p:last-child': {
+      mb: 0,
+    },
+  },
+  '& hr': {
+    border: 'none',
+    borderTop: '1px solid',
+    borderColor: 'divider',
+    my: '2.5em',
+  },
+  '& img': {
+    maxWidth: '100%',
+    height: 'auto',
+    borderRadius: tokens.radii.card,
+  },
+};

@@ -41,19 +41,17 @@ export const tokens = {
   },
   fonts: {
     ui: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    display: "'DM Sans', 'Inter', sans-serif",
+    display: "'Newsreader', Georgia, 'Times New Roman', serif",
+    wordmark: "'DM Sans', 'Inter', sans-serif",
   },
   radii: {
-    control: '10px',
-    button: '12px',
-    card: '18px',
-    panel: '24px',
-    hero: '28px',
+    control: '8px',
+    button: '999px',
+    card: '12px',
+    image: '12px',
     pill: '999px',
   },
   shadows: {
-    soft: '0 8px 30px rgba(20, 22, 25, 0.06)',
-    card: '0 18px 50px rgba(20, 22, 25, 0.08)',
-    floating: '0 28px 80px rgba(20, 22, 25, 0.11)',
+    overlay: '0 12px 32px rgba(20, 22, 25, 0.14)',
   },
 };

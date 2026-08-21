@@ -52,7 +52,7 @@ export const ArticleList: React.FC<ArticleListProps> = ({
 
   if (variant === 'featured') {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
         {articles.map((article) => (
           <ArticleCard key={article.id} article={article} variant="featured" />
         ))}
@@ -62,7 +62,16 @@ export const ArticleList: React.FC<ArticleListProps> = ({
 
   if (variant === 'compact') {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          '& > * + *': {
+            borderTop: '1px solid',
+            borderColor: 'divider',
+          },
+        }}
+      >
         {articles.map((article) => (
           <ArticleCard key={article.id} article={article} variant="compact" />
         ))}
@@ -79,7 +88,8 @@ export const ArticleList: React.FC<ArticleListProps> = ({
           sm: 'repeat(2, 1fr)',
           md: 'repeat(3, 1fr)',
         },
-        gap: 3,
+        columnGap: { xs: 3, md: 3 },
+        rowGap: { xs: 4, md: 4.5 },
       }}
     >
       {articles.map((article) => (

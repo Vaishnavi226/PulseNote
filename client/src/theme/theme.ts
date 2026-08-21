@@ -3,6 +3,7 @@ import { tokens } from './tokens';
 
 export const createAppTheme = (mode: 'light' | 'dark') => {
   const paletteTokens = tokens.colors[mode];
+  const isLight = mode === 'light';
 
   const themeOptions: ThemeOptions = {
     palette: {
@@ -18,7 +19,7 @@ export const createAppTheme = (mode: 'light' | 'dark') => {
       },
       primary: {
         main: paletteTokens.text,
-        contrastText: mode === 'light' ? '#FFFFFF' : '#0B0C0D',
+        contrastText: isLight ? '#FFFFFF' : '#0B0C0D',
       },
       secondary: {
         main: paletteTokens.accent,
@@ -40,54 +41,69 @@ export const createAppTheme = (mode: 'light' | 'dark') => {
       fontFamily: tokens.fonts.ui,
       h1: {
         fontFamily: tokens.fonts.display,
-        fontWeight: 700,
-        fontSize: '3.5rem',
-        lineHeight: 1.1,
-        letterSpacing: '-0.03em',
+        fontWeight: 600,
+        fontSize: 'clamp(2.25rem, 5vw, 3.5rem)',
+        lineHeight: 1.08,
+        letterSpacing: '-0.02em',
       },
       h2: {
         fontFamily: tokens.fonts.display,
-        fontWeight: 700,
-        fontSize: '2.5rem',
-        lineHeight: 1.2,
-        letterSpacing: '-0.02em',
+        fontWeight: 600,
+        fontSize: 'clamp(1.75rem, 3vw, 2.25rem)',
+        lineHeight: 1.15,
+        letterSpacing: '-0.015em',
       },
       h3: {
         fontFamily: tokens.fonts.display,
         fontWeight: 600,
-        fontSize: '1.75rem',
-        lineHeight: 1.3,
+        fontSize: '1.375rem',
+        lineHeight: 1.25,
         letterSpacing: '-0.01em',
       },
       h4: {
         fontFamily: tokens.fonts.display,
         fontWeight: 600,
-        fontSize: '1.25rem',
+        fontSize: '1.125rem',
+        lineHeight: 1.35,
+      },
+      h5: {
+        fontFamily: tokens.fonts.ui,
+        fontWeight: 600,
+        fontSize: '1rem',
         lineHeight: 1.4,
       },
       body1: {
         fontFamily: tokens.fonts.ui,
-        fontSize: '1.0625rem', // 17px
-        lineHeight: 1.6,
+        fontSize: '1rem',
+        lineHeight: 1.65,
       },
       body2: {
         fontFamily: tokens.fonts.ui,
-        fontSize: '0.9375rem', // 15px
-        lineHeight: 1.5,
+        fontSize: '0.875rem',
+        lineHeight: 1.55,
+      },
+      caption: {
+        fontFamily: tokens.fonts.ui,
+        fontSize: '0.8125rem',
+        lineHeight: 1.45,
+        color: paletteTokens.textMuted,
+      },
+      overline: {
+        fontFamily: tokens.fonts.ui,
+        fontSize: '0.6875rem',
+        fontWeight: 700,
+        lineHeight: 1.6,
+        letterSpacing: '0.09em',
+        textTransform: 'uppercase',
       },
       button: {
         fontFamily: tokens.fonts.ui,
         fontWeight: 600,
         textTransform: 'none',
       },
-      caption: {
-        fontFamily: tokens.fonts.ui,
-        fontSize: '0.8125rem',
-        color: paletteTokens.textMuted,
-      },
     },
     shape: {
-      borderRadius: 12,
+      borderRadius: 8,
     },
     components: {
       MuiCssBaseline: {
@@ -101,32 +117,33 @@ export const createAppTheme = (mode: 'light' | 'dark') => {
             WebkitFontSmoothing: 'antialiased',
           },
           a: {
-            color: paletteTokens.accent,
+            color: 'inherit',
             textDecoration: 'none',
-            '&:hover': {
-              textDecoration: 'underline',
-            },
           },
         },
       },
       MuiButton: {
         styleOverrides: {
           root: {
-            borderRadius: tokens.radii.button,
+            borderRadius: tokens.radii.pill,
             padding: '10px 22px',
             fontSize: '0.9375rem',
             boxShadow: 'none',
-            transition: 'all 200ms cubic-bezier(0.22, 1, 0.36, 1)',
+            transition:
+              'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
             '&:hover': {
-              boxShadow: tokens.shadows.soft,
-              transform: 'translateY(-1px)',
+              boxShadow: 'none',
+              transform: 'none',
             },
+          },
+          sizeLarge: {
+            padding: '12px 26px',
           },
           containedPrimary: {
             backgroundColor: paletteTokens.text,
-            color: mode === 'light' ? '#FFFFFF' : '#0B0C0D',
+            color: isLight ? '#FFFFFF' : '#0B0C0D',
             '&:hover': {
-              backgroundColor: mode === 'light' ? '#22252A' : '#E0E0DC',
+              backgroundColor: isLight ? '#26282C' : '#DADAD6',
             },
           },
           outlined: {
@@ -134,6 +151,12 @@ export const createAppTheme = (mode: 'light' | 'dark') => {
             color: paletteTokens.text,
             '&:hover': {
               borderColor: paletteTokens.text,
+              backgroundColor: 'transparent',
+            },
+          },
+          text: {
+            color: paletteTokens.text,
+            '&:hover': {
               backgroundColor: paletteTokens.surfaceSoft,
             },
           },
@@ -144,8 +167,9 @@ export const createAppTheme = (mode: 'light' | 'dark') => {
           root: {
             borderRadius: tokens.radii.card,
             backgroundColor: paletteTokens.surface,
+            border: '1px solid',
             borderColor: paletteTokens.border,
-            boxShadow: tokens.shadows.soft,
+            boxShadow: 'none',
             backgroundImage: 'none',
           },
         },
@@ -154,7 +178,52 @@ export const createAppTheme = (mode: 'light' | 'dark') => {
         styleOverrides: {
           root: {
             borderRadius: tokens.radii.pill,
-            fontWeight: 500,
+            fontWeight: 600,
+            fontSize: '0.8125rem',
+            boxShadow: 'none',
+          },
+          outlined: {
+            borderColor: paletteTokens.borderStrong,
+            color: paletteTokens.textSecondary,
+            '&:hover': {
+              borderColor: paletteTokens.textMuted,
+              backgroundColor: 'transparent',
+              color: paletteTokens.text,
+            },
+          },
+          filled: {
+            backgroundColor: paletteTokens.text,
+            color: isLight ? '#FFFFFF' : '#0B0C0D',
+          },
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: {
+            borderRadius: tokens.radii.control,
+            backgroundColor: paletteTokens.surface,
+          },
+        },
+      },
+      MuiPaginationItem: {
+        styleOverrides: {
+          root: {
+            borderRadius: tokens.radii.control,
+            fontWeight: 600,
+          },
+          outlined: {
+            borderColor: 'transparent',
+          },
+        },
+      },
+      MuiMenu: {
+        styleOverrides: {
+          paper: {
+            borderRadius: tokens.radii.control,
+            border: '1px solid',
+            borderColor: paletteTokens.border,
+            boxShadow: tokens.shadows.overlay,
+            backgroundImage: 'none',
           },
         },
       },
