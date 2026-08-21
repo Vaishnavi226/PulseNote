@@ -103,3 +103,14 @@ logs/
 tmp/
 temp/
 
+# Local project documentation
+DECISIONS.md
+FLOW.md
+IMPLEMENTATION_PLAN.md
+PHASE_3C_REPORT.md
+PHASE_4B_REPORT.md
+PHASE_4C_REPORT.md
+PulseNote_Design_System_and_UI_Spec*
+PulseNote_Final_Tech_Stack.md
+PulseNote_PRD.md
+
