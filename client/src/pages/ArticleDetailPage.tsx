@@ -1,11 +1,15 @@
 import React from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
-import { Box, Typography, Chip, Avatar, Divider } from '@mui/material';
-import { ArrowLeft, Clock, Eye, MessageSquare, Zap } from 'lucide-react';
+import { Box, Typography, Chip, Divider } from '@mui/material';
+import { ArrowLeft, Eye, MessageSquare, Zap } from 'lucide-react';
 import { useArticleDetail } from '../features/articles/hooks';
 import { PageContainer } from '../components/common/PageContainer';
 import { LoadingState } from '../components/common/LoadingState';
 import { ErrorState } from '../components/common/ErrorState';
+import { Kicker } from '../components/common/Kicker';
+import { Byline } from '../features/articles/Byline';
+import { proseStyles } from '../features/articles/proseStyles';
+import { tokens } from '../theme/tokens';
 
 export const ArticleDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -31,17 +35,9 @@ export const ArticleDetailPage: React.FC = () => {
     );
   }
 
-  const formattedDate = article.publishedAt
-    ? new Date(article.publishedAt).toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      })
-    : null;
-
   return (
-    <PageContainer readingMeasure>
-      <Box sx={{ mb: 4 }}>
+    <PageContainer>
+      <Box sx={{ maxWidth: 880, mx: 'auto', pt: { xs: 1, md: 2 } }}>
         <Box
           component={RouterLink}
           to="/"
@@ -52,86 +48,91 @@ export const ArticleDetailPage: React.FC = () => {
             color: 'text.secondary',
             textDecoration: 'none',
             fontWeight: 600,
-            fontSize: '0.875rem',
-            mb: 4,
-            '&:hover': { color: 'primary.main' },
+            fontSize: '0.9375rem',
+            mb: { xs: 4, md: 5 },
+            transition: 'color 160ms ease',
+            '&:hover': {
+              color: 'secondary.dark',
+              textDecoration: 'underline',
+              textUnderlineOffset: '4px',
+            },
           }}
         >
           <ArrowLeft size={16} />
           Back to home
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3, flexWrap: 'wrap' }}>
-          <Chip
-            label={article.category.name.toUpperCase()}
-            size="small"
-            variant="outlined"
-            component={RouterLink}
-            to={`/explore?category=${article.category.slug}`}
-            sx={{ fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.05em', textDecoration: 'none' }}
-          />
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}>
-            <Clock size={14} />
-            <Typography variant="caption">{article.readingTimeMin} min read</Typography>
-          </Box>
-          {formattedDate && (
-            <Typography variant="caption" color="text.secondary">
-              Published {formattedDate}
-            </Typography>
-          )}
+        <Box
+          component={RouterLink}
+          to={`/explore?category=${article.category.slug}`}
+          sx={{
+            display: 'inline-block',
+            textDecoration: 'none',
+            outlineOffset: 4,
+            mb: 2,
+          }}
+        >
+          <Kicker
+            color="accent"
+            component="span"
+            sx={{
+              transition: 'color 160ms ease',
+              '&:hover': {
+                textDecoration: 'underline',
+                textUnderlineOffset: '4px',
+              },
+            }}
+          >
+            {article.category.name}
+          </Kicker>
         </Box>
 
-        <Typography variant="h1" component="h1" sx={{ mb: 3, lineHeight: 1.15 }}>
+        <Typography variant="h1" component="h1" sx={{ mb: { xs: 2.5, md: 3 } }}>
           {article.title}
         </Typography>
 
         {article.excerpt && (
-          <Typography variant="h4" color="text.secondary" sx={{ mb: 4, fontWeight: 400, lineHeight: 1.5 }}>
+          <Typography
+            sx={{
+              fontFamily: tokens.fonts.display,
+              fontWeight: 400,
+              fontSize: { xs: '1.1875rem', md: '1.3125rem' },
+              lineHeight: 1.45,
+              color: 'text.secondary',
+              mb: { xs: 3.5, md: 4 },
+            }}
+          >
             {article.excerpt}
           </Typography>
         )}
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-          <Avatar
-            sx={{
-              width: 44,
-              height: 44,
-              bgcolor: 'secondary.main',
-              color: '#fff',
-              fontSize: '1.1rem',
-              fontWeight: 700,
-            }}
-          >
-            {article.author.name.charAt(0).toUpperCase()}
-          </Avatar>
-          <Box>
-            <Typography variant="body2" sx={{ fontWeight: 700 }}>
-              {article.author.name}
-            </Typography>
-            {article.author.bio && (
-              <Typography variant="caption" color="text.secondary">
-                {article.author.bio}
-              </Typography>
-            )}
-          </Box>
-        </Box>
+        <Byline
+          author={article.author}
+          publishedAt={article.publishedAt}
+          readingTimeMin={article.readingTimeMin}
+          size="md"
+        />
+
+        <Box sx={{ borderTop: '1px solid', borderColor: 'divider', mt: { xs: 4, md: 5 } }} />
       </Box>
 
       {article.coverImageUrl && (
         <Box
           sx={{
             width: '100%',
-            height: { xs: 240, sm: 360, md: 440 },
-            borderRadius: '20px',
+            maxWidth: 1080,
+            mx: 'auto',
+            mt: { xs: 4, md: 6 },
+            height: { xs: 240, sm: 360, md: 480 },
+            borderRadius: tokens.radii.card,
             overflow: 'hidden',
-            mb: 5,
           }}
         >
           <Box
             component="img"
             src={article.coverImageUrl}
             alt={article.title}
-            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
         </Box>
       )}
@@ -139,107 +140,63 @@ export const ArticleDetailPage: React.FC = () => {
       {article.quickTake && (
         <Box
           sx={{
-            p: 3.5,
-            borderRadius: 3,
-            backgroundColor: 'background.default',
-            border: '1px solid',
-            borderColor: 'divider',
-            mb: 5,
+            maxWidth: 720,
+            mx: 'auto',
+            mt: { xs: 4, md: 6 },
+            borderLeft: '2px solid',
+            borderColor: 'secondary.main',
+            pl: { xs: 2.5, md: 3 },
+            py: 0.25,
           }}
         >
+          <Kicker color="accent" sx={{ mb: 0.5 }}>
+            Quick Take
+          </Kicker>
           <Typography
-            variant="caption"
             sx={{
-              fontWeight: 700,
-              color: 'secondary.main',
-              letterSpacing: '0.05em',
-              display: 'block',
-              mb: 1,
+              fontFamily: tokens.fonts.display,
+              fontStyle: 'italic',
+              fontSize: '1.0625rem',
+              lineHeight: 1.6,
+              color: 'text.secondary',
+              whiteSpace: 'pre-line',
             }}
           >
-            QUICK TAKE
-          </Typography>
-          <Typography variant="body1" color="text.primary" sx={{ whiteSpace: 'pre-line', lineHeight: 1.7 }}>
             {article.quickTake}
           </Typography>
         </Box>
       )}
 
-      <Divider sx={{ mb: 5 }} />
-
-      <Box
-        sx={{
-          typography: 'body1',
-          lineHeight: 1.8,
-          fontSize: '1.125rem',
-          color: 'text.primary',
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-          '& h1': { fontSize: '2rem', fontWeight: 800, mt: 5, mb: 2, fontFamily: "'DM Sans', sans-serif" },
-          '& h2': { fontSize: '1.5rem', fontWeight: 700, mt: 4, mb: 2, fontFamily: "'DM Sans', sans-serif" },
-          '& h3': { fontSize: '1.25rem', fontWeight: 700, mt: 3, mb: 1.5, fontFamily: "'DM Sans', sans-serif" },
-          '& p': { mb: 2.5 },
-          '& strong': { fontWeight: 700 },
-          '& ul, & ol': { pl: 4, mb: 2.5 },
-          '& li': { mb: 0.5 },
-          '& code': {
-            fontFamily: 'monospace',
-            fontSize: '0.9em',
-            backgroundColor: 'action.hover',
-            px: 0.8,
-            py: 0.3,
-            borderRadius: 1,
-          },
-          '& pre': {
-            p: 3,
-            borderRadius: 2,
-            backgroundColor: 'action.hover',
-            overflow: 'auto',
-            mb: 2.5,
-            '& code': { backgroundColor: 'transparent', px: 0, py: 0 },
-          },
-          '& blockquote': {
-            borderLeft: '3px solid',
-            borderColor: 'primary.main',
-            pl: 3,
-            ml: 0,
-            my: 3,
-            color: 'text.secondary',
-            fontStyle: 'italic',
-          },
-        }}
-      >
-        {article.content}
+      <Box sx={{ maxWidth: 720, mx: 'auto', mt: { xs: 4, md: 6 } }}>
+        <Box sx={proseStyles}>{article.content}</Box>
       </Box>
 
-      <Divider sx={{ my: 5 }} />
+      <Box sx={{ maxWidth: 720, mx: 'auto', mt: { xs: 5, md: 7 } }}>
+        <Divider sx={{ mb: { xs: 3.5, md: 4 } }} />
 
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 4 }}>
-        {article.tags.map((tag) => (
-          <Chip
-            key={tag.id}
-            label={tag.name}
-            size="small"
-            variant="outlined"
-            sx={{ borderRadius: '10px', fontWeight: 600 }}
-          />
-        ))}
-      </Box>
-
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, color: 'text.secondary', mb: 6 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Eye size={16} />
-          <Typography variant="caption">{article.views} views</Typography>
-        </Box>
-        {article.challengeCount > 0 && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <MessageSquare size={16} />
-            <Typography variant="caption">{article.challengeCount} challenges</Typography>
+        {article.tags.length > 0 && (
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+            {article.tags.map((tag) => (
+              <Chip key={tag.id} label={tag.name} size="small" variant="outlined" sx={{ fontWeight: 600 }} />
+            ))}
           </Box>
         )}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Zap size={16} />
-          <Typography variant="caption">Pulse {article.pulseScore}</Typography>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Eye size={16} />
+            <Typography variant="caption">{article.views} views</Typography>
+          </Box>
+          {article.challengeCount > 0 && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <MessageSquare size={16} />
+              <Typography variant="caption">{article.challengeCount} challenges</Typography>
+            </Box>
+          )}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Zap size={16} />
+            <Typography variant="caption">Pulse {article.pulseScore}</Typography>
+          </Box>
         </Box>
       </Box>
     </PageContainer>
