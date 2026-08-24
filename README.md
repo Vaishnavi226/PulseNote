@@ -10,7 +10,7 @@ PulseNote is a full-stack web application for publishing and reading long-form t
 
 The core idea behind PulseNote is *structured conversation*: articles are meant to be engaged with seriously, through counterarguments, supporting evidence, and added context ("challenges") rather than drive-by reactions. That philosophy shapes both the product design and the underlying data model, which includes dedicated structures for challenges, threaded replies, votes, moderation, and notifications.
 
-The current release implements the reading and publishing foundation end to end: JWT authentication with role-based permissions, an article lifecycle (draft → published → archived) with draft-visibility rules, category browsing, search, sorting, and pagination — all backed by a typed REST API and a relational PostgreSQL schema managed with Prisma.
+The current release implements the reading and publishing foundation end to end: JWT authentication with role-based permissions, an article lifecycle (draft → published → archived) with draft-visibility ruleS, category browsing, search, sorting, and pagination — all backed by a typed REST API and a relational PostgreSQL schema managed with Prisma.
 
 Interactive discussion features (the challenge feed, comments, votes, and notifications) are fully modeled in the database schema but are not yet exposed through the API or UI. See [Current Status](#current-status).
 
