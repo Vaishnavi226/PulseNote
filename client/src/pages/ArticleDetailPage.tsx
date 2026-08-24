@@ -12,6 +12,12 @@ import { proseStyles } from '../features/articles/proseStyles';
 import { ArticleSummary } from '../features/articles/types';
 import { tokens } from '../theme/tokens';
 
+/* ── Spacing scale (4px base) ──
+   s1 = 4px    s2 = 8px    s3 = 12px
+   s4 = 16px   s5 = 20px   s6 = 24px
+   s8 = 32px   s10 = 40px  s12 = 48px
+*/
+
 const clampLines = (lines: number) =>
   ({
     display: '-webkit-box',
@@ -21,7 +27,7 @@ const clampLines = (lines: number) =>
   }) as const;
 
 /* ────────────────────────────────────────────────────
-   Sidebar – Trending row (compact, ranked feel)
+   Sidebar – Trending row
    ──────────────────────────────────────────────────── */
 const SidebarArticleRow: React.FC<{ article: ArticleSummary }> = ({ article }) => (
   <Box
@@ -29,8 +35,8 @@ const SidebarArticleRow: React.FC<{ article: ArticleSummary }> = ({ article }) =
     to={`/article/${article.slug}`}
     sx={{
       display: 'flex',
-      gap: 1.25,
-      py: 1.25,
+      gap: 1.5,
+      py: 1.5,
       textDecoration: 'none',
       color: 'inherit',
       outlineOffset: 4,
@@ -40,9 +46,9 @@ const SidebarArticleRow: React.FC<{ article: ArticleSummary }> = ({ article }) =
     {article.coverImageUrl && (
       <Box
         sx={{
-          width: 52,
-          height: 52,
-          borderRadius: '4px',
+          width: 48,
+          height: 48,
+          borderRadius: tokens.radii.control,
           overflow: 'hidden',
           flexShrink: 0,
         }}
@@ -67,8 +73,8 @@ const SidebarArticleRow: React.FC<{ article: ArticleSummary }> = ({ article }) =
         sx={{
           fontFamily: tokens.fonts.display,
           fontWeight: 600,
-          fontSize: '0.875rem',
-          lineHeight: 1.3,
+          fontSize: '0.8125rem',
+          lineHeight: 1.35,
           transition: 'color 160ms ease',
           ...clampLines(2),
         }}
@@ -80,7 +86,7 @@ const SidebarArticleRow: React.FC<{ article: ArticleSummary }> = ({ article }) =
 );
 
 /* ────────────────────────────────────────────────────
-   Sidebar – Recommendation row (compact editorial)
+   Sidebar – Recommendation row
    ──────────────────────────────────────────────────── */
 const SidebarRecommendation: React.FC<{ article: ArticleSummary }> = ({ article }) => (
   <Box
@@ -88,8 +94,8 @@ const SidebarRecommendation: React.FC<{ article: ArticleSummary }> = ({ article 
     to={`/article/${article.slug}`}
     sx={{
       display: 'flex',
-      gap: 1.25,
-      py: 1.25,
+      gap: 1.5,
+      py: 1.5,
       textDecoration: 'none',
       color: 'inherit',
       outlineOffset: 4,
@@ -99,9 +105,9 @@ const SidebarRecommendation: React.FC<{ article: ArticleSummary }> = ({ article 
     {article.coverImageUrl && (
       <Box
         sx={{
-          width: 64,
-          height: 48,
-          borderRadius: '4px',
+          width: 56,
+          height: 42,
+          borderRadius: tokens.radii.control,
           overflow: 'hidden',
           flexShrink: 0,
         }}
@@ -126,8 +132,8 @@ const SidebarRecommendation: React.FC<{ article: ArticleSummary }> = ({ article 
         sx={{
           fontFamily: tokens.fonts.display,
           fontWeight: 600,
-          fontSize: '0.875rem',
-          lineHeight: 1.3,
+          fontSize: '0.8125rem',
+          lineHeight: 1.35,
           transition: 'color 160ms ease',
           ...clampLines(2),
         }}
@@ -139,7 +145,7 @@ const SidebarRecommendation: React.FC<{ article: ArticleSummary }> = ({ article 
 );
 
 /* ────────────────────────────────────────────────────
-   Sidebar section wrapper (title + hairline rail)
+   Sidebar section wrapper
    ──────────────────────────────────────────────────── */
 const SidebarSection: React.FC<{
   title: string;
@@ -160,7 +166,7 @@ const SidebarSection: React.FC<{
 );
 
 /* ────────────────────────────────────────────────────
-   Stat pill (icon + label)
+   Stat pill
    ──────────────────────────────────────────────────── */
 const StatItem: React.FC<{
   icon: React.ReactNode;
@@ -189,7 +195,6 @@ export const ArticleDetailPage: React.FC = () => {
     .filter((a) => a.slug !== slug)
     .slice(0, 4);
 
-  /* ── Loading / Error states ── */
   if (isLoading) {
     return (
       <PageContainer readingMeasure>
@@ -210,7 +215,6 @@ export const ArticleDetailPage: React.FC = () => {
     );
   }
 
-  /* ── Sidebar content (shared between desktop & mobile) ── */
   const sidebarContent = (
     <>
       {trendingArticles.length > 0 && (
@@ -222,7 +226,7 @@ export const ArticleDetailPage: React.FC = () => {
       )}
 
       {recArticles.length > 0 && (
-        <Box sx={{ mt: 3 }}>
+        <Box sx={{ mt: 4 }}>
           <SidebarSection title="Top Recommendations">
             {recArticles.map((a) => (
               <SidebarRecommendation key={a.id} article={a} />
@@ -238,8 +242,8 @@ export const ArticleDetailPage: React.FC = () => {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', lg: '7fr 3fr' },
-          gap: { xs: 0, lg: 5 },
+          gridTemplateColumns: { xs: '1fr', lg: '1fr 300px' },
+          gap: { xs: 0, lg: 6 },
           pt: { xs: 1, md: 2 },
           alignItems: 'start',
         }}
@@ -257,8 +261,8 @@ export const ArticleDetailPage: React.FC = () => {
               color: 'text.secondary',
               textDecoration: 'none',
               fontWeight: 600,
-              fontSize: '0.9375rem',
-              mb: { xs: 2.5, md: 3 },
+              fontSize: '0.875rem',
+              mb: { xs: 2, md: 2.5 },
               transition: 'color 160ms ease',
               '&:hover': {
                 color: 'secondary.dark',
@@ -267,7 +271,7 @@ export const ArticleDetailPage: React.FC = () => {
               },
             }}
           >
-            <ArrowLeft size={16} />
+            <ArrowLeft size={14} />
             Back to home
           </Box>
 
@@ -298,7 +302,14 @@ export const ArticleDetailPage: React.FC = () => {
           </Box>
 
           {/* Headline */}
-          <Typography variant="h1" component="h1" sx={{ mb: { xs: 1.25, md: 1.5 } }}>
+          <Typography
+            variant="h1"
+            component="h1"
+            sx={{
+              mb: { xs: 1, md: 1.25 },
+              fontSize: { xs: 'clamp(1.75rem, 4vw, 2.5rem)', md: 'clamp(2rem, 3.5vw, 2.75rem)' },
+            }}
+          >
             {article.title}
           </Typography>
 
@@ -308,10 +319,11 @@ export const ArticleDetailPage: React.FC = () => {
               sx={{
                 fontFamily: tokens.fonts.display,
                 fontWeight: 400,
-                fontSize: { xs: '1.125rem', md: '1.25rem' },
-                lineHeight: 1.45,
+                fontSize: { xs: '1rem', md: '1.125rem' },
+                lineHeight: 1.5,
                 color: 'text.secondary',
                 mb: { xs: 1.5, md: 2 },
+                maxWidth: 600,
               }}
             >
               {article.excerpt}
@@ -329,14 +341,14 @@ export const ArticleDetailPage: React.FC = () => {
           {/* Hairline */}
           <Box sx={{ borderTop: '1px solid', borderColor: 'divider', mt: { xs: 2, md: 2.5 } }} />
 
-          {/* Cover image — aspect-ratio driven, spans full main column */}
+          {/* Cover image */}
           {article.coverImageUrl && (
             <Box
               sx={{
                 width: '100%',
                 mt: { xs: 2, md: 2.5 },
                 aspectRatio: '16 / 9',
-                maxHeight: { md: 480 },
+                maxHeight: { md: 380 },
                 borderRadius: tokens.radii.card,
                 overflow: 'hidden',
               }}
@@ -354,11 +366,11 @@ export const ArticleDetailPage: React.FC = () => {
           {article.quickTake && (
             <Box
               sx={{
-                mt: { xs: 2.5, md: 3 },
+                mt: { xs: 3, md: 3.5 },
                 borderLeft: '2px solid',
                 borderColor: 'secondary.main',
                 pl: { xs: 2, md: 2.5 },
-                py: 0.25,
+                py: 0.5,
               }}
             >
               <Kicker color="accent" sx={{ mb: 0.5 }}>
@@ -368,7 +380,7 @@ export const ArticleDetailPage: React.FC = () => {
                 sx={{
                   fontFamily: tokens.fonts.display,
                   fontStyle: 'italic',
-                  fontSize: '1.0625rem',
+                  fontSize: { xs: '0.9375rem', md: '1rem' },
                   lineHeight: 1.6,
                   color: 'text.secondary',
                   whiteSpace: 'pre-line',
@@ -379,11 +391,11 @@ export const ArticleDetailPage: React.FC = () => {
             </Box>
           )}
 
-          {/* Article body — constrained reading measure */}
+          {/* Article body */}
           <Box
             sx={{
-              mt: { xs: 2.5, md: 3 },
-              maxWidth: 680,
+              mt: { xs: 3, md: 3.5 },
+              maxWidth: 640,
             }}
           >
             <Box sx={proseStyles}>{article.content}</Box>
@@ -391,14 +403,14 @@ export const ArticleDetailPage: React.FC = () => {
 
           {/* FAQ Section */}
           {article.faqs && article.faqs.length > 0 && (
-            <Box sx={{ mt: { xs: 4, md: 5 }, maxWidth: 680 }}>
+            <Box sx={{ mt: { xs: 4, md: 5 }, maxWidth: 640 }}>
               <Box sx={{ borderTop: '1px solid', borderColor: 'divider', mb: { xs: 3, md: 3.5 } }} />
               <Typography
                 variant="h2"
                 component="h2"
                 sx={{
                   fontFamily: tokens.fonts.display,
-                  fontSize: { xs: '1.375rem', md: '1.5rem' },
+                  fontSize: { xs: '1.25rem', md: '1.375rem' },
                   fontWeight: 600,
                   mb: { xs: 2.5, md: 3 },
                 }}
@@ -422,7 +434,7 @@ export const ArticleDetailPage: React.FC = () => {
                       sx={{
                         fontFamily: tokens.fonts.display,
                         fontWeight: 600,
-                        fontSize: '1.0625rem',
+                        fontSize: '1rem',
                         lineHeight: 1.4,
                         pt: { xs: 2.5, md: 3 },
                         pb: 1,
@@ -493,7 +505,7 @@ export const ArticleDetailPage: React.FC = () => {
           </Box>
         </Box>
 
-        {/* ── Sidebar (desktop – sticky) ── */}
+        {/* ── Sidebar (desktop) ── */}
         <Box
           sx={{
             display: { xs: 'none', lg: 'block' },
