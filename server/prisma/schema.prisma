@@ -151,6 +151,7 @@ model Article {
   readingTimeMin Int           @default(5)
   seoTitle       String?
   seoDescription String?
+  faqs           Json?
   publishedAt    DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt

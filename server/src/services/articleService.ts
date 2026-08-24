@@ -304,6 +304,7 @@ export class ArticleService {
           readingTimeMin: data.readingTimeMin,
           seoTitle: data.seoTitle,
           seoDescription: data.seoDescription,
+          faqs: data.faqs ?? undefined,
           ...(data.tagIds && data.tagIds.length > 0
             ? {
                 articleTags: {
@@ -360,6 +361,7 @@ export class ArticleService {
             readingTimeMin: data.readingTimeMin,
             seoTitle: data.seoTitle,
             seoDescription: data.seoDescription,
+            faqs: data.faqs ?? undefined,
             ...(data.tagIds && data.tagIds.length > 0
               ? {
                   articleTags: {
@@ -462,6 +464,9 @@ export class ArticleService {
       ...(data.seoTitle !== undefined && { seoTitle: data.seoTitle }),
       ...(data.seoDescription !== undefined && { seoDescription: data.seoDescription }),
       ...(data.readingTimeMin !== undefined && { readingTimeMin: data.readingTimeMin }),
+      ...(data.faqs !== undefined && {
+        faqs: data.faqs === null ? Prisma.DbNull : data.faqs,
+      }),
     };
 
     // Handle tag replacement atomically

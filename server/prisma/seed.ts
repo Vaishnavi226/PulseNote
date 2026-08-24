@@ -63,6 +63,20 @@ const NEW_ARTICLES = [
     seoTitle: 'Prompt Architecture: The Evolution Beyond Prompt Engineering in 2026',
     seoDescription: 'How prompt engineering has evolved into structured prompt architecture with versioning, testing, and evaluation for production AI systems.',
     tags: ['artificial-intelligence', 'machine-learning', 'software-architecture'],
+    faqs: [
+      {
+        question: 'Is prompt engineering still a useful skill if prompt architecture is the future?',
+        answer: 'Yes, but the skill set is shifting. Understanding how to craft effective instructions remains essential, but the focus moves from isolated one-shot tricks to designing repeatable, testable prompt systems. Teams that treat prompts as versioned software components — with input/output contracts, evaluation metrics, and regression tests — will outperform those still relying on ad-hoc prompt crafting.',
+      },
+      {
+        question: 'What tools do teams actually use for prompt versioning and evaluation?',
+        answer: 'Most production teams use a combination of prompt registries (often just versioned template files in Git), evaluation frameworks like promptfoo or Langsmith, and CI pipelines that run test suites against prompt changes. The key is treating prompts like any other code artifact: reviewed, tested, and deployed through established workflows.',
+      },
+      {
+        question: 'How do you measure prompt quality systematically?',
+        answer: 'Define evaluation metrics specific to your use case: precision and recall for extraction tasks, safety violation rates for content generation, latency for real-time applications, and human preference scores for open-ended generation. Maintain a regression test dataset with hundreds of cases and track these metrics across prompt versions over time.',
+      },
+    ],
   },
   // ── DEVELOPMENT (2 new) ──────────────────────────────────
   {
@@ -98,6 +112,20 @@ const NEW_ARTICLES = [
     seoTitle: 'TypeScript 6 Features: Pattern Matching, Effect Tracking, Branded Types',
     seoDescription: 'A deep look at TypeScript 6 features that transform type safety: pattern matching, effect tracking, and first-class branded types.',
     tags: ['typescript', 'javascript', 'developer-experience'],
+    faqs: [
+      {
+        question: 'When will TypeScript 6 be available for production use?',
+        answer: 'TypeScript 6 is currently in beta. The final release timeline depends on the TypeScript team\'s release cycle, but based on past patterns, a stable release is expected within the next few months. Teams can start experimenting with beta releases to evaluate the new features and plan migration strategies.',
+      },
+      {
+        question: 'Will TypeScript 6 break existing codebases?',
+        answer: 'TypeScript has a strong commitment to backward compatibility. The new features — pattern matching, effect tracking, and branded types — are additive. Existing code will continue to compile without changes. However, teams using workarounds for branded types or complex conditional types may want to refactor to use the new native syntax once they adopt TypeScript 6.',
+      },
+      {
+        question: 'Is effect tracking mandatory in TypeScript 6?',
+        answer: 'No, effect tracking is optional. It\'s designed as an opt-in feature for teams that want to enforce purity constraints at compile time. You can adopt it incrementally — start with new modules or critical paths where purity guarantees matter most, and expand coverage over time.',
+      },
+    ],
   },
   // ── WEB DEVELOPMENT (2 new) ──────────────────────────────
   {
@@ -116,6 +144,20 @@ const NEW_ARTICLES = [
     seoTitle: 'React Server Components vs Client Components: When to Use Each',
     seoDescription: 'Understanding the mental model for React Server Components and Client Components — when each excels and how they compose together.',
     tags: ['react', 'javascript', 'performance'],
+    faqs: [
+      {
+        question: 'Do I need to rewrite my existing React app to use Server Components?',
+        answer: 'No. Server Components are an additive feature, not a replacement. You can adopt them incrementally — start with new pages or components that would benefit from zero client-side JavaScript cost, like article content or product listings. Existing client components continue to work exactly as before.',
+      },
+      {
+        question: 'Can Server Components fetch data directly without useEffect?',
+        answer: 'Yes, that\'s one of their primary advantages. Server Components can call databases, APIs, or file systems directly during rendering. This eliminates the client-side waterfall pattern where components mount, then fetch, then render — reducing both latency and client JavaScript.',
+      },
+      {
+        question: 'What happens when a Server Component needs interactivity?',
+        answer: 'Server Components cannot use hooks like useState or useEffect. When you need interactivity, you create a separate Client Component (marked with "use client") and import it into your Server Component. The Server Component can pass server-fetched data as props to the Client Component, combining the benefits of both.',
+      },
+    ],
   },
   {
     categoryId: 'web-development',
@@ -186,6 +228,20 @@ const NEW_ARTICLES = [
     seoTitle: 'Zero Trust Architecture: Beyond the Marketing Hype to Real Implementation',
     seoDescription: 'What zero trust actually means: identity verification, least privilege, micro-segmentation, and the hard work of auditing every permission.',
     tags: ['cybersecurity', 'cloud-computing', 'software-architecture'],
+    faqs: [
+      {
+        question: 'How long does a typical zero trust implementation take?',
+        answer: 'A meaningful zero trust implementation typically takes 12-18 months for a mid-size organization. The timeline depends on the complexity of existing infrastructure, the number of services and permissions to audit, and how much technical debt exists. Most teams start with identity verification at the perimeter and progressively tighten internal service-to-service trust.',
+      },
+      {
+        question: 'Can we implement zero trust without replacing our existing VPN?',
+        answer: 'Yes, and that\'s actually the recommended approach. Zero trust is an architectural principle, not a product swap. Start by implementing strong identity verification and least-privilege access alongside your existing VPN. Over time, as you build out micro-segmentation and continuous monitoring, the VPN becomes less critical for many access patterns.',
+      },
+      {
+        question: 'What\'s the biggest mistake organizations make with zero trust?',
+        answer: 'Implementing zero trust at the perimeter without addressing internal trust. Most teams harden the outer boundary — better authentication at the door — but still allow unrestricted service-to-service communication inside the network. This creates a hard shell with a soft center, which is exactly what attackers exploit once they breach the perimeter.',
+      },
+    ],
   },
   {
     categoryId: 'cybersecurity',
@@ -273,6 +329,20 @@ const NEW_ARTICLES = [
     seoTitle: 'How to Survive Technical Interviews: A Pragmatic Engineer\'s Guide',
     seoDescription: 'Understanding what technical interviews actually measure and the pragmatic approach to passing them while signaling your real engineering skills.',
     tags: ['developer-experience', 'software-architecture', 'testing'],
+    faqs: [
+      {
+        question: 'How many LeetCode problems should I solve before interviewing?',
+        answer: 'Quality over quantity. Focus on 80-100 problems across the core categories: arrays, strings, trees, graphs, dynamic programming, and system design. The goal isn\'t memorization — it\'s pattern recognition. Solve each problem, then solve similar variations until the pattern clicks. Most candidates who solve 100+ problems indiscriminately waste time without building transferable intuition.',
+      },
+      {
+        question: 'Should I negotiate a job offer if the interview process felt disrespectful?',
+        answer: 'The interview process is a strong signal of how the company operates. If the process felt disorganized, disrespectful, or无视 of your time, negotiate with clear expectations and strong boundaries — but also seriously evaluate whether this is a company you want to join. A bad interview process often reflects deeper cultural issues.',
+      },
+      {
+        question: 'What\'s the best way to prepare for system design interviews?',
+        answer: 'Practice structured thinking: start with requirements clarification, define the high-level architecture, then drill into specific components. Study real-world systems (how Twitter handles timelines, how Netflix does CDN, how Uber handles surge pricing) not as trivia, but as design case studies. The ability to reason through trade-offs matters more than memorizing specific architectures.',
+      },
+    ],
   },
   // ── EMERGING TECH (2 new) ────────────────────────────────
   {
@@ -647,6 +717,7 @@ async function main() {
         publishedAt: existing.publishedAt ?? new Date(),
         seoTitle: existing.seoTitle,
         seoDescription: existing.seoDescription,
+        faqs: existing.faqs ?? undefined,
       },
     });
   }
@@ -688,6 +759,7 @@ async function main() {
         publishedAt: art.publishedAt,
         seoTitle: art.seoTitle,
         seoDescription: art.seoDescription,
+        faqs: art.faqs ?? undefined,
       },
     });
     articleBySlug[art.slug] = created;

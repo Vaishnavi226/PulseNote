@@ -169,7 +169,7 @@ const RankedStory: React.FC<RankedStoryProps> = ({ article, rank }) => (
           sx={{
             fontFamily: tokens.fonts.display,
             fontWeight: 600,
-            fontSize: { xs: '1.1875rem', md: '1.3125rem' },
+            fontSize: { xs: '1.1875rem', md: '1.375rem' },
             lineHeight: 1.3,
             transition: 'color 160ms ease',
             ...clampLines(3),
@@ -269,7 +269,7 @@ export const TrendingPage: React.FC = () => {
         </>
       )}
 
-      <Box sx={{ borderTop: '1px solid', borderColor: 'divider', mt: { xs: 2, md: 3 } }} />
+      <Box sx={{ borderTop: '1px solid', borderColor: 'divider', mt: { xs: 3, md: 4 } }} />
     </PageContainer>
   );
 };

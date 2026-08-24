@@ -42,6 +42,15 @@ export const createArticleSchema = z.object({
   seoTitle: z.string().max(70, 'SEO title must be 70 characters or fewer').optional(),
   seoDescription: z.string().max(160, 'SEO description must be 160 characters or fewer').optional(),
   readingTimeMin: z.number().int().min(1).max(120).default(5),
+  faqs: z
+    .array(
+      z.object({
+        question: z.string().min(1, 'FAQ question is required').max(300),
+        answer: z.string().min(1, 'FAQ answer is required').max(2000),
+      }),
+    )
+    .max(10, 'Maximum 10 FAQs allowed')
+    .optional(),
 });
 
 // ── Update Body ─────────────────────────────────────────
@@ -62,6 +71,16 @@ export const updateArticleSchema = z.object({
   seoTitle: z.string().max(70).optional().nullable(),
   seoDescription: z.string().max(160).optional().nullable(),
   readingTimeMin: z.number().int().min(1).max(120).optional(),
+  faqs: z
+    .array(
+      z.object({
+        question: z.string().min(1).max(300),
+        answer: z.string().min(1).max(2000),
+      }),
+    )
+    .max(10)
+    .optional()
+    .nullable(),
 });
 
 // ── Publish Body ────────────────────────────────────────

@@ -22,23 +22,37 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         {children}
       </Box>
 
-      <Box component="footer" sx={{ py: 6, mt: 'auto', backgroundColor: 'background.paper' }}>
-        <Divider sx={{ mb: 4 }} />
-        <Container maxWidth="xl" sx={{ px: { xs: 2, sm: 4, md: 6 } }}>
+      <Box component="footer" sx={{ mt: 'auto', backgroundColor: 'background.paper' }}>
+        <Divider />
+        <Container maxWidth="xl" sx={{ px: { xs: 2, sm: 4, md: 6 }, py: { xs: 6, md: 8 } }}>
           <Box
             sx={{
               display: 'flex',
               flexDirection: { xs: 'column', sm: 'row' },
               justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 2,
+              alignItems: { xs: 'flex-start', sm: 'flex-end' },
+              gap: 3,
             }}
           >
-            <Typography variant="body2" color="text.secondary">
-              © {new Date().getFullYear()} PulseNote. Read. Think. Challenge.
-            </Typography>
-            <Typography variant="caption" color="text.disabled">
-              Editorial publishing & structured discussion platform
+            <Box>
+              <Typography
+                sx={{
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontWeight: 800,
+                  letterSpacing: '-0.03em',
+                  fontSize: '1.25rem',
+                  lineHeight: 1.2,
+                  color: 'text.primary',
+                }}
+              >
+                PulseNote
+              </Typography>
+              <Typography variant="caption" color="text.muted" sx={{ display: 'block', mt: 0.75 }}>
+                Editorial publishing &amp; structured discussion
+              </Typography>
+            </Box>
+            <Typography variant="caption" color="text.muted">
+              © {new Date().getFullYear()} PulseNote · Read. Think. Challenge.
             </Typography>
           </Box>
         </Container>

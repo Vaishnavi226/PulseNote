@@ -59,6 +59,7 @@ export interface ArticleDetail extends ArticleSummary {
   seoTitle: string | null;
   seoDescription: string | null;
   author: AuthorDetail;
+  faqs?: { question: string; answer: string }[] | null;
 }
 
 export interface PaginationInfo {

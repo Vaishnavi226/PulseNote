@@ -74,7 +74,7 @@ export const HomePage: React.FC = () => {
 
       {/* Latest Stories */}
       {showLatestSection && (
-        <Box sx={{ mt: { xs: 4, md: 6 } }}>
+        <Box sx={{ mt: { xs: 5, md: 7 } }}>
           <SectionHeader
             kicker="The Feed"
             title="Latest Stories"
