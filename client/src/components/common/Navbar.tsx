@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Typography, Button, IconButton, Container, Avatar, Menu, MenuItem } from '@mui/material';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
-import { Sun, Moon, Sparkles } from 'lucide-react';
+import { Sun, Moon, Sparkles, Search } from 'lucide-react';
 import { usePulseTheme } from '../../theme/ThemeProvider';
 import { useAuth } from '../../features/auth/useAuth';
 
@@ -17,6 +17,7 @@ export const Navbar: React.FC = () => {
     { label: 'Explore', path: '/explore' },
     { label: 'Trending', path: '/trending' },
     { label: 'Challenges', path: '/challenges' },
+    { label: 'Write', path: '/write' },
   ];
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -40,16 +41,15 @@ export const Navbar: React.FC = () => {
         position: 'sticky',
         top: 0,
         zIndex: 1100,
-        height: 76,
+        height: 60,
         display: 'flex',
         alignItems: 'center',
-        backgroundColor: mode === 'light' ? 'rgba(247, 247, 244, 0.85)' : 'rgba(13, 14, 16, 0.85)',
-        backdropFilter: 'blur(12px)',
+        backgroundColor: mode === 'light' ? '#FFFFFF' : '#121417',
         borderBottom: '1px solid',
-        borderColor: 'divider',
+        borderColor: mode === 'light' ? '#E8E8E8' : 'divider',
       }}
     >
-      <Container maxWidth="xl" sx={{ px: { xs: 2, sm: 4, md: 6 } }}>
+      <Container maxWidth="xl" sx={{ px: { xs: 2, sm: 3, md: 8 }, maxWidth: 1400 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           {/* Logo */}
           <Box
@@ -63,13 +63,15 @@ export const Navbar: React.FC = () => {
               color: 'text.primary',
             }}
           >
-            <Sparkles size={24} color={mode === 'light' ? '#5C78B8' : '#728ECB'} />
+            <Sparkles size={22} color={mode === 'light' ? '#050505' : '#728ECB'} />
             <Typography
               variant="h4"
               sx={{
                 fontWeight: 800,
+                fontSize: '1.25rem',
                 letterSpacing: '-0.03em',
                 fontFamily: "'DM Sans', sans-serif",
+                color: mode === 'light' ? '#101525' : '#FFFFFF',
               }}
             >
               PulseNote
@@ -77,7 +79,7 @@ export const Navbar: React.FC = () => {
           </Box>
 
           {/* Navigation Links */}
-          <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 4, alignItems: 'center' }}>
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 3.5, alignItems: 'center' }}>
             {navItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
@@ -85,28 +87,17 @@ export const Navbar: React.FC = () => {
                   key={item.path}
                   component={RouterLink}
                   to={item.path}
-                  variant="body2"
                   sx={{
+                    fontSize: '13px',
                     fontWeight: isActive ? 700 : 500,
-                    color: isActive ? 'primary.main' : 'text.secondary',
+                    color: isActive
+                      ? (mode === 'light' ? '#101525' : '#FFFFFF')
+                      : (mode === 'light' ? '#4A5060' : 'text.secondary'),
                     textDecoration: 'none',
-                    position: 'relative',
-                    transition: 'color 180ms ease',
+                    transition: 'color 160ms ease',
                     '&:hover': {
-                      color: 'primary.main',
+                      color: mode === 'light' ? '#101525' : '#FFFFFF',
                     },
-                    '&::after': isActive
-                      ? {
-                          content: '""',
-                          position: 'absolute',
-                          bottom: -6,
-                          left: 0,
-                          right: 0,
-                          height: 2,
-                          backgroundColor: 'secondary.main',
-                          borderRadius: 1,
-                        }
-                      : {},
                   }}
                 >
                   {item.label}
@@ -116,88 +107,85 @@ export const Navbar: React.FC = () => {
           </Box>
 
           {/* Actions */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <IconButton onClick={toggleTheme} size="small" sx={{ color: 'text.secondary' }}>
-              {mode === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <IconButton
+              component={RouterLink}
+              to="/explore"
+              size="small"
+              sx={{ color: mode === 'light' ? '#101525' : 'text.secondary' }}
+              aria-label="Search articles"
+            >
+              <Search size={18} />
+            </IconButton>
+
+            <IconButton
+              onClick={toggleTheme}
+              size="small"
+              sx={{ color: mode === 'light' ? '#101525' : 'text.secondary' }}
+              aria-label="Toggle theme"
+            >
+              {mode === 'light' ? <Moon size={18} /> : <Sun size={18} />}
             </IconButton>
 
             {isAuthenticated && user ? (
-              <>
-                <Button
-                  component={RouterLink}
-                  to="/write"
-                  variant="contained"
-                  color="primary"
-                  size="small"
-                  sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
-                >
-                  Write Note
-                </Button>
-
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <IconButton onClick={handleMenuOpen} size="small">
-                    <Avatar
-                      sx={{
-                        width: 34,
-                        height: 34,
-                        bgcolor: 'secondary.main',
-                        color: '#fff',
-                        fontSize: '0.875rem',
-                        fontWeight: 700,
-                      }}
-                    >
-                      {user.name.charAt(0).toUpperCase()}
-                    </Avatar>
-                  </IconButton>
-                  <Menu
-                    anchorEl={anchorEl}
-                    open={Boolean(anchorEl)}
-                    onClose={handleMenuClose}
-                    transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-                    anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-                    slotProps={{
-                      paper: {
-                        sx: { mt: 1, minWidth: 160 },
-                      },
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <IconButton onClick={handleMenuOpen} size="small">
+                  <Avatar
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      bgcolor: '#050505',
+                      color: '#fff',
+                      fontSize: '0.8125rem',
+                      fontWeight: 700,
                     }}
                   >
-                    <MenuItem disabled>
-                      <Typography variant="body2" color="text.secondary">
-                        {user.name}
-                      </Typography>
-                    </MenuItem>
-                    <MenuItem onClick={handleLogout}>
-                      <Typography variant="body2">Sign Out</Typography>
-                    </MenuItem>
-                  </Menu>
-                </Box>
-              </>
-            ) : (
-              <>
-                <Button
-                  component={RouterLink}
-                  to="/login"
-                  variant="text"
-                  size="small"
-                  sx={{
-                    display: { xs: 'none', sm: 'inline-flex' },
-                    color: 'text.secondary',
-                    fontWeight: 600,
+                    {user.name.charAt(0).toUpperCase()}
+                  </Avatar>
+                </IconButton>
+                <Menu
+                  anchorEl={anchorEl}
+                  open={Boolean(anchorEl)}
+                  onClose={handleMenuClose}
+                  transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                  anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                  slotProps={{
+                    paper: {
+                      sx: { mt: 1, minWidth: 160 },
+                    },
                   }}
                 >
-                  Log In
-                </Button>
-                <Button
-                  component={RouterLink}
-                  to="/register"
-                  variant="contained"
-                  color="primary"
-                  size="small"
-                  sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
-                >
-                  Sign Up
-                </Button>
-              </>
+                  <MenuItem disabled>
+                    <Typography variant="body2" color="text.secondary">
+                      {user.name}
+                    </Typography>
+                  </MenuItem>
+                  <MenuItem onClick={handleLogout}>
+                    <Typography variant="body2">Sign Out</Typography>
+                  </MenuItem>
+                </Menu>
+              </Box>
+            ) : (
+              <Button
+                component={RouterLink}
+                to="/login"
+                sx={{
+                  backgroundColor: mode === 'light' ? '#050505' : '#FFFFFF',
+                  color: mode === 'light' ? '#FFFFFF' : '#050505',
+                  borderRadius: '5px',
+                  padding: '7px 16px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  boxShadow: 'none',
+                  '&:hover': {
+                    backgroundColor: mode === 'light' ? '#222222' : '#E0E0E0',
+                    boxShadow: 'none',
+                  },
+                }}
+              >
+                Sign In
+              </Button>
             )}
           </Box>
         </Box>
@@ -205,3 +193,4 @@ export const Navbar: React.FC = () => {
     </Box>
   );
 };
+

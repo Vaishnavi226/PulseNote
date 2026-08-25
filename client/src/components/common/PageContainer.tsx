@@ -14,11 +14,12 @@ export const PageContainer: React.FC<PageContainerProps> = ({
 }) => {
   return (
     <Container
-      maxWidth={readingMeasure ? 'md' : 'xl'}
+      maxWidth={readingMeasure ? 'md' : false}
       sx={{
-        py: { xs: 4, md: 6, lg: 8 },
-        px: { xs: 2, sm: 4, md: 6 },
-        maxWidth: readingMeasure ? '820px !important' : '1320px',
+        py: { xs: 3, md: 4 },
+        px: { xs: '16px', sm: '24px', md: '64px' },
+        maxWidth: readingMeasure ? '820px !important' : '1400px !important',
+        mx: 'auto',
         ...sx,
       }}
       {...rest}
@@ -27,3 +28,4 @@ export const PageContainer: React.FC<PageContainerProps> = ({
     </Container>
   );
 };
+
