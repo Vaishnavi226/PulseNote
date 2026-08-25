@@ -41,24 +41,27 @@ export const HomePage: React.FC = () => {
   return (
     <PageContainer>
       {/* ── Masthead ── */}
-      <Box sx={{ pt: { xs: 3, md: 4 }, pb: { xs: 3, md: 5 }, maxWidth: 720 }}>
-        <Kicker color="accent" sx={{ mb: 1.5 }}>
+      <Box sx={{ pb: { xs: 3, md: 4 }, maxWidth: 720 }}>
+        <Kicker color="accent" sx={{ mb: 1 }}>
           Technology &amp; Digital Culture
         </Kicker>
 
-        <Typography variant="h1" component="h1" sx={{ mb: 2 }}>
-          Read<Box component="span" sx={{ color: 'secondary.dark' }}>.</Box>{' '}
-          Think<Box component="span" sx={{ color: 'secondary.dark' }}>.</Box>{' '}
-          Challenge<Box component="span" sx={{ color: 'secondary.dark' }}>.</Box>
+        <Typography variant="h1" component="h1" sx={{ mb: 1.5 }}>
+          Ideas worth
+          <Box component="span" sx={{ color: 'secondary.dark' }}> interrogating</Box>.
         </Typography>
 
         <Typography
           variant="body1"
           color="text.secondary"
-          sx={{ maxWidth: 520, fontSize: { xs: '0.9375rem', md: '1.0625rem' }, lineHeight: 1.6, mb: 3 }}
+          sx={{
+            maxWidth: 520,
+            fontSize: { xs: '0.9375rem', md: '1.0625rem' },
+            lineHeight: 1.6,
+            mb: 2.5,
+          }}
         >
-          PulseNote is a technology publication built for structured conversation
-          — long-form ideas, honest argument, and room to push back.
+          Long-form thinking on software, systems, and the culture that shapes them.
         </Typography>
 
         <Box component={RouterLink} to="/explore" sx={quietLinkSx}>
@@ -67,9 +70,18 @@ export const HomePage: React.FC = () => {
         </Box>
       </Box>
 
-      {/* ── Featured story ── */}
+      {/* ── Lead story ── */}
       {leadArticle && (
-        <ArticleCard article={leadArticle} variant="featured" />
+        <Box
+          sx={{
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            mt: { xs: 1, md: 1.5 },
+            pt: { xs: 3, md: 4 },
+          }}
+        >
+          <ArticleCard article={leadArticle} variant="featured" />
+        </Box>
       )}
 
       {/* ── Latest Stories ── */}
@@ -99,7 +111,7 @@ export const HomePage: React.FC = () => {
 
       {/* ── Most Recent ── */}
       {recentArticles.length > 0 && (
-        <Box sx={{ mt: { xs: 4, md: 5 }, maxWidth: 720 }}>
+        <Box sx={{ mt: { xs: 4, md: 5 } }}>
           <SectionHeader
             kicker="Just Published"
             title="Most Recent"
